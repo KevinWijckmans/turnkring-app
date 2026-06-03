@@ -181,7 +181,7 @@
             alleLeden.forEach(lid => {
                 // Checken of we oudere records hebben zonder de nieuwe 'fotosToestemming' variabele
                 const magOpFoto = lid.fotosToestemming !== undefined ? lid.fotosToestemming : false;
-                const betaald Status = lid.lidgeldBetaald || false;
+                const betaaldStatus = lid.lidgeldBetaald || false;
 
                 tbody.innerHTML += `
                     <tr>
