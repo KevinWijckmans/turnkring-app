@@ -365,13 +365,12 @@
                 dataPunten.push({ datum: d.datum, aantal: aantalAanwezigen });
             });
 
-            // Sorteer data op datum
-            dataPoints.sort((a,b) => new Date(a.datum) - new Date(b.datum));
+            // HIER ZAT DE FIX: dataPunten in plaats van dataPoints
+            dataPunten.sort((a,b) => new Date(a.datum) - new Date(b.datum));
 
             const labels = dataPunten.map(p => p.datum);
             const data = dataPunten.map(p => p.aantal);
 
-            // Update of maak de Line Chart
             const ctx = document.getElementById('aanwezigheidChart').getContext('2d');
             if (lineChart) lineChart.destroy();
 
