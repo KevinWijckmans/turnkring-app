@@ -33,6 +33,11 @@
         .card p { margin: 0; font-size: 1.8rem; font-weight: bold; color: var(--primary); }
         .chart-container { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
         
+        /* Specifieke styling voor de individuele aanwezigheidsmatrix */
+        .matrix-container { overflow-x: auto; margin-top: 15px; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .td-check { text-align: center; font-size: 1.1rem; }
+        .badge-pct { background: #34495e; color: white; padding: 3px 8px; border-radius: 10px; font-weight: bold; font-size: 0.85rem; }
+
         #login-screen { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -66,7 +71,7 @@
         <nav>
             <button onclick="showSection('leden')" id="btn-leden" class="active">Ledenlijst (Live)</button>
             <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid">Aanwezigheden</button>
-            <button onclick="showSection('stats')" id="btn-stats">Statistieken 📊</button>
+            <button onclick="showSection('stats')" id="btn-stats">Statistieken & Rapporten 📊</button>
         </nav>
 
         <div class="container">
@@ -130,10 +135,9 @@
                     <div class="card"><h3>Gem. Aanwezigheid</h3><p id="stat-gem-aanwezigheid">--</p></div>
                 </div>
 
-                <h3>Aanwezigheidsverloop per Groep</h3>
-                <div class="flex-row" style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                <div class="flex-row" style="background: #e1e8ed; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
                     <div style="flex: 1; min-width: 150px;">
-                        <label>Groep:</label>
+                        <label><strong>Selecteer Groep:</strong></label>
                         <select id="stats-groep">
                             <option value="Kleuters">Kleuters</option>
                             <option value="Meisjes 1">Meisjes 1</option>
@@ -150,28 +154,41 @@
                         </select>
                     </div>
                     <div style="flex: 1; min-width: 150px;">
-                        <label>Van:</label>
+                        <label><strong>Van datum:</strong></label>
                         <input type="date" id="stats-van">
                     </div>
                     <div style="flex: 1; min-width: 150px;">
-                        <label>Tot:</label>
+                        <label><strong>Tot datum:</strong></label>
                         <input type="date" id="stats-tot">
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px;">
-                    <div class="chart-container" style="position: relative; height:350px;">
-                        <canvas id="aanwezigheidChart"></canvas>
+                <h3>Grafisch verloop</h3>
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="aanwezigheidChart"></canvas>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-top: 10px;">
+                    <div class="chart-container" style="position: relative; height:260px;">
+                        <canvas id="groepenChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height:260px;">
+                        <canvas id="lidgeldChart"></canvas>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 10px;">
-                    <div class="chart-container" style="position: relative; height:300px;">
-                        <canvas id="groepenChart"></canvas>
-                    </div>
-                    <div class="chart-container" style="position: relative; height:300px;">
-                        <canvas id="lidgeldChart"></canvas>
-                    </div>
+                <br>
+                <h3>Individueel Aanwezigheidsrapport (Leden-Matrix)</h3>
+                <p style="color:#7f8c8d; font-size:0.9rem; margin-top:-10px;">Hieronder zie je exact per lid wanneer hij/zij aanwezig was in de geselecteerde periode.</p>
+                
+                <div class="matrix-container">
+                    <table id="matrix-table">
+                        <thead id="matrix-thead">
+                            </thead>
+                        <tbody id="matrix-tbody">
+                            <tr><td>Selecteer een periode om data te laden...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
 
             </div>
@@ -200,7 +217,6 @@
         let alleLeden = [];
         let unsubscribeLeden = null;
         
-        // Grafiek variabelen om ze later te kunnen updaten
         let lineChart = null;
         let barChart = null;
         let pieChart = null;
@@ -320,7 +336,6 @@
 
             const key = `${datum}_${groep}`;
             try {
-                // Sla nu datum en groep mee op als losse velden voor de statistiek-indexering!
                 await setDoc(doc(db, "aanwezigheden", key), { 
                     aanwezigen: aanwezigeIds,
                     groep: groep,
@@ -330,7 +345,7 @@
             } catch(e) { alert("Niet toegestaan."); }
         }
 
-        // --- STATISTIEKEN LOGICA ---
+        // --- STATISTIEKEN & RAPPORTEN LOGICA ---
         function calculateGeneralStats() {
             document.getElementById('stat-totaal-leden').innerText = alleLeden.length;
 
@@ -338,7 +353,6 @@
             const betaaldProcent = alleLeden.length > 0 ? Math.round((betaaldCount / alleLeden.length) * 100) : 0;
             document.getElementById('stat-betaald-procent').innerText = `${betaaldProcent}%`;
 
-            // Genereer vaste groeps- en lidgeldgrafieken
             renderGroepenChart();
             renderLidgeldChart(betaaldCount, alleLeden.length - betaaldCount);
         }
@@ -358,16 +372,19 @@
 
             const querySnapshot = await getDocs(q);
             let dataPunten = [];
+            let alleLessenGelezen = [];
 
             querySnapshot.forEach((doc) => {
                 const d = doc.data();
                 const aantalAanwezigen = d.aanwezigen ? d.aanwezigen.length : 0;
                 dataPunten.push({ datum: d.datum, aantal: aantalAanwezigen });
+                alleLessenGelezen.push({ datum: d.datum, aanwezigen: d.aanwezigen || [] });
             });
 
-            // HIER ZAT DE FIX: dataPunten in plaats van dataPoints
             dataPunten.sort((a,b) => new Date(a.datum) - new Date(b.datum));
+            alleLessenGelezen.sort((a,b) => new Date(a.datum) - new Date(b.datum));
 
+            // 1. UPDATE DE LIJNGRAFIEK
             const labels = dataPunten.map(p => p.datum);
             const data = dataPunten.map(p => p.aantal);
 
@@ -389,6 +406,69 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
+
+            // 2. BEREKEN ALGEMEEN GEMIDDELDE PERCENTAGE VOOR KPI KAART
+            const gefilterdeLeden = alleLeden.filter(l => l.groep === groep);
+            if(gefilterdeLeden.length > 0 && alleLessenGelezen.length > 0) {
+                let totaalChecks = gefilterdeLeden.length * alleLessenGelezen.length;
+                let totaalAanwezig = data.reduce((a, b) => a + b, 0);
+                let gemPct = Math.round((totaalAanwezig / totaalChecks) * 100);
+                document.getElementById('stat-gem-aanwezigheid').innerText = `${gemPct}%`;
+            } else {
+                document.getElementById('stat-gem-aanwezigheid').innerText = `--`;
+            }
+
+            // 3. BOUW DE INDIVIDUELE MATRIX (DE GEWENSTE LEDEN-TABEL)
+            buildIndividualMatrix(gefilterdeLeden, alleLessenGelezen);
+        }
+
+        function buildIndividualMatrix(leden, lessen) {
+            const thead = document.getElementById('matrix-thead');
+            const tbody = document.getElementById('matrix-tbody');
+            
+            if(!thead || !tbody) return;
+
+            // Header bouwen met alle datums
+            if(lessen.length === 0 || leden.length === 0) {
+                thead.innerHTML = '';
+                tbody.innerHTML = '<tr><td>Geen data gevonden voor deze combinatie van groep en datums. Sla eerst aanwezigheden op.</td></tr>';
+                return;
+            }
+
+            let headerHTML = '<tr><th>Naam & Voornaam turner</th>';
+            lessen.forEach(les => {
+                // Toon kortere datum (MM-DD) voor mobiele scannability
+                const mDate = les.datum.substring(5);
+                headerHTML += `<th style="text-align:center;">${mDate}</th>`;
+            });
+            headerHTML += '<th style="text-align:center;">Opkomst %</th></tr>';
+            thead.innerHTML = headerHTML;
+
+            // Rijen bouwen per lid
+            let bodyHTML = '';
+            leden.sort((a,b) => a.naam.localeCompare(b.naam));
+
+            leden.forEach(lid => {
+                bodyHTML += `<tr><td><strong>${lid.naam}</strong> ${lid.voornaam}</td>`;
+                
+                let aantalKeerAanwezig = 0;
+
+                lessen.forEach(les => {
+                    const wasAanwezig = les.aanwezigen.includes(lid.id);
+                    if(wasAanwezig) {
+                        aantalKeerAanwezig++;
+                        bodyHTML += '<td class="td-check" style="color:#2ecc71;">✅</td>';
+                    } else {
+                        bodyHTML += '<td class="td-check" style="color:#e74c3c;">❌</td>';
+                    }
+                });
+
+                // Bereken individueel opkomstpercentage
+                let pct = Math.round((aantalKeerAanwezig / lessen.length) * 100);
+                bodyHTML += `<td style="text-align:center;"><span class="badge-pct" style="background:${pct > 70 ? '#2ecc71' : (pct > 40 ? '#f39c12' : '#e74c3c')}">${pct}%</span></td></tr>`;
+            });
+
+            tbody.innerHTML = bodyHTML;
         }
 
         function renderGroepenChart() {
@@ -438,7 +518,6 @@
         document.getElementById('stats-van').addEventListener('change', loadAanwezigheidsStats);
         document.getElementById('stats-tot').addEventListener('change', loadAanwezigheidsStats);
         
-        // Standaard datums instellen (Afgelopen maand tot vandaag)
         const vandaag = new Date();
         const maandGeleden = new Date();
         maandGeleden.setMonth(vandaag.getMonth() - 1);
