@@ -41,7 +41,7 @@
             background-color: var(--accent);
         }
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 2rem auto;
             padding: 1.5rem;
             background: white;
@@ -51,19 +51,33 @@
         .section { display: none; }
         .section.active { display: block; }
         
-        /* Formulier & Knoppen */
+        /* Formulier styling */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
         .form-group { margin-bottom: 1rem; }
+        .form-group.full-width { grid-column: span 2; }
+        @media (max-width: 600px) { .form-group.full-width { grid-column: span 1; } }
+        
         label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
         input, select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button.btn { background-color: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
+        input[type="checkbox"] { width: auto; transform: scale(1.2); margin-right: 0.5rem; }
+        
+        button.btn { background-color: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 1rem; }
         button.btn:hover { opacity: 0.9; }
 
         /* Tabellen en Lijsten */
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .table-responsive { overflow-x: auto; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9rem; }
         th { background-color: var(--primary); color: white; }
         .flex-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
-        .presence-row { display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #eee; align-items: center; }
+        .presence-row { display: flex; justify-content: space-between; padding: 0.6rem; border-bottom: 1px solid #eee; align-items: center; }
     </style>
 </head>
 <body>
@@ -79,38 +93,100 @@
     </nav>
 
     <div class="container">
+        <!-- SECTIE 1: LEDENBEHEER -->
         <div id="section-leden" class="section active">
             <h2>Nieuw Lid Toevoegen</h2>
             <form id="lid-form" onsubmit="addLid(event)">
-                <div class="form-group">
-                    <label>Naam Lid:</label>
-                    <input type="text" id="lid-naam" required placeholder="Bijv. Jan Janssens">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Voornaam:</label>
+                        <input type="text" id="lid-voornaam" required placeholder="Bijv. Sarah">
+                    </div>
+                    <div class="form-group">
+                        <label>Naam:</label>
+                        <input type="text" id="lid-naam" required placeholder="Bijv. Peeters">
+                    </div>
+                    <div class="form-group">
+                        <label>Geboortedatum:</label>
+                        <input type="date" id="lid-geboortedatum" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Geslacht:</label>
+                        <select id="lid-geslacht" required>
+                            <option value="V">Vrouw (V)</option>
+                            <option value="M">Man (M)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Groep / Les:</label>
+                        <select id="lid-groep" required>
+                            <option value="Kleuters">Kleuters</option>
+                            <option value="Meisjes 1">Meisjes 1</option>
+                            <option value="Meisjes 2">Meisjes 2</option>
+                            <option value="Jongens">Jongens</option>
+                            <option value="Juffers 1">Juffers 1</option>
+                            <option value="Juffers 2">Juffers 2</option>
+                            <option value="Knapen">Knapen</option>
+                            <option value="Turnsters en turners">Turnsters en turners</option>
+                            <option value="Skippies">Skippies</option>
+                            <option value="Jumpers">Jumpers</option>
+                            <option value="Demo Team">Demo Team</option>
+                            <option value="Dance Adults">Dance Adults</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Straat en huisnummer:</label>
+                        <input type="text" id="lid-adres" placeholder="Dorpstraat 12">
+                    </div>
+                    <div class="form-group">
+                        <label>Postcode en gemeente:</label>
+                        <input type="text" id="lid-gemeente" placeholder="2000 Antwerpen">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefoon 1:</label>
+                        <input type="tel" id="lid-tel1" placeholder="0470 00 00 00">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefoon 2:</label>
+                        <input type="tel" id="lid-tel2" placeholder="Optioneel">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail 1:</label>
+                        <input type="email" id="lid-email1" placeholder="naam@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail 2:</label>
+                        <input type="email" id="lid-email2" placeholder="Optioneel">
+                    </div>
+                    <div class="form-group full-width" style="display: flex; align-items: center; margin-top: 1rem;">
+                        <input type="checkbox" id="lid-marketing">
+                        <label for="lid-marketing" style="margin: 0; cursor: pointer;">Wenst e-mails te ontvangen van Jong & Vrij i.v.m. activiteiten?</label>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Groep / Les:</label>
-                    <select id="lid-groep" required>
-                        <option value="Kleuters">Kleuters</option>
-                        <option value="Precompetitie">Precompetitie</option>
-                        <option value="Juffers">Juffers</option>
-                        <option value="Recreanten">Recreanten</option>
-                    </select>
-                </div>
+                <br>
                 <button type="submit" class="btn">Lid Opslaan</button>
             </form>
 
-            <h2>Ledenlijst</h2>
-            <table id="leden-tabel">
-                <thead>
-                    <tr>
-                        <th>Naam</th>
-                        <th>Groep</th>
-                        <th>Actie</th>
-                    </tr>
-                </thead>
-                <tbody id="leden-lijst-body"></tbody>
-            </table>
+            <h2>Geregistreerde Leden</h2>
+            <div class="table-responsive">
+                <table id="leden-tabel">
+                    <thead>
+                        <tr>
+                            <th>Naam & Voornaam</th>
+                            <th>Groep</th>
+                            <th>Geboortedatum</th>
+                            <th>Geslacht</th>
+                            <th>Contact</th>
+                            <th>Mails Info?</th>
+                            <th>Actie</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leden-lijst-body"><!-- Dynamisch --></tbody>
+                </table>
+            </div>
         </div>
 
+        <!-- SECTIE 2: AANWEZIGHEDEN -->
         <div id="section-aanwezigheid" class="section">
             <h2>Aanwezigheden Registreren</h2>
             <div class="flex-row">
@@ -118,34 +194,41 @@
                     <label>Kies Groep:</label>
                     <select id="filter-groep" onchange="loadAanwezigheidsLijst()">
                         <option value="Kleuters">Kleuters</option>
-                        <option value="Precompetitie">Precompetitie</option>
-                        <option value="Juffers">Juffers</option>
-                        <option value="Recreanten">Recreanten</option>
+                        <option value="Meisjes 1">Meisjes 1</option>
+                        <option value="Meisjes 2">Meisjes 2</option>
+                        <option value="Jongens">Jongens</option>
+                        <option value="Juffers 1">Juffers 1</option>
+                        <option value="Juffers 2">Juffers 2</option>
+                        <option value="Knapen">Knapen</option>
+                        <option value="Turnsters en turners">Turnsters en turners</option>
+                        <option value="Skippies">Skippies</option>
+                        <option value="Jumpers">Jumpers</option>
+                        <option value="Demo Team">Demo Team</option>
+                        <option value="Dance Adults">Dance Adults</option>
                     </select>
                 </div>
                 <div style="flex: 1;">
                     <label>Datum Les:</label>
-                    <input type="date" id="les-datum" required>
+                    <input type="date" id="les-datum" onchange="loadAanwezigheidsLijst()" required>
                 </div>
             </div>
 
             <div id="aanwezigheids-lijst">
-                </div>
+                <!-- Hier komen de vinkjes -->
+            </div>
             <br>
             <button class="btn" onclick="saveAanwezigheid()">Aanwezigheden Opslaan</button>
         </div>
     </div>
 
     <script>
-        // Lokale database simulatie (Slaat op in je browser via LocalStorage)
-        // Zodat je direct kunt testen zonder ingewikkelde servers!
-        let database = JSON.parse(localStorage.getItem('turnkring_db')) || { leden: [], aanwezigheden: {} };
+        // Database in browsergeheugen
+        let database = JSON.parse(localStorage.getItem('turnkring_db_v2')) || { leden: [], aanwezigheden: {} };
 
         function saveDB() {
-            localStorage.setItem('turnkring_db', JSON.stringify(database));
+            localStorage.setItem('turnkring_db_v2', JSON.stringify(database));
         }
 
-        // Navigatie tussen tabbladen
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -154,7 +237,6 @@
             document.getElementById(`btn-${sectionId}`).classList.add('active');
 
             if(sectionId === 'aanwezigheid') {
-                // Zet datum standaard op vandaag
                 if(!document.getElementById('les-datum').value) {
                     document.getElementById('les-datum').value = new Date().toISOString().split('T')[0];
                 }
@@ -167,14 +249,28 @@
         // Lid Toevoegen
         function addLid(e) {
             e.preventDefault();
-            const naam = document.getElementById('lid-naam').value;
-            const groep = document.getElementById('lid-groep').value;
-            const id = Date.now().toString(); // Unieke ID
+            
+            const nieuwLid = {
+                id: Date.now().toString(),
+                voornaam: document.getElementById('lid-voornaam').value,
+                naam: document.getElementById('lid-naam').value,
+                geboortedatum: document.getElementById('lid-geboortedatum').value,
+                geslacht: document.getElementById('lid-geslacht').value,
+                groep: document.getElementById('lid-groep').value,
+                adres: document.getElementById('lid-adres').value,
+                gemeente: document.getElementById('lid-gemeente').value,
+                tel1: document.getElementById('lid-tel1').value,
+                tel2: document.getElementById('lid-tel2').value,
+                email1: document.getElementById('lid-email1').value,
+                email2: document.getElementById('lid-email2').value,
+                marketing: document.getElementById('lid-marketing').checked
+            };
 
-            database.leden.push({ id, naam, groep });
+            database.leden.push(nieuwLid);
             saveDB();
             renderLeden();
             document.getElementById('lid-form').reset();
+            alert("Lid succesvol toegevoegd!");
         }
 
         // Lid Verwijderen
@@ -186,36 +282,51 @@
             }
         }
 
-        // Toon leden in tabel
+        // Ledenlijst opbouwen
         function renderLeden() {
             const tbody = document.getElementById('leden-lijst-body');
             tbody.innerHTML = '';
-            database.leden.forEach(lid => {
+            
+            // Sorteer op naam
+            const gesorteerdeLeden = [...database.leden].sort((a, b) => a.naam.localeCompare(b.naam));
+
+            gesorteerdeLeden.forEach(lid => {
                 tbody.innerHTML += `
                     <tr>
-                        <td>${lid.naam}</td>
+                        <td><strong>${lid.naam}</strong> ${lid.voornaam}</td>
                         <td>${lid.groep}</td>
-                        <td><button onclick="deleteLid('${lid.id}')" style="background:#e74c3c; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Verwijder</button></td>
+                        <td>${lid.geboortedatum.split('-').reverse().join('-')}</td>
+                        <td>${lid.geslacht}</td>
+                        <td>
+                            ${lid.email1 ? '📧 ' + lid.email1 + '<br>' : ''}
+                            ${lid.tel1 ? '📞 ' + lid.tel1 : ''}
+                        </td>
+                        <td>${lid.marketing ? '✅ Ja' : '❌ Nee'}</td>
+                        <td>
+                            <button onclick="deleteLid('${lid.id}')" style="background:#e74c3c; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Wis</button>
+                        </td>
                     </tr>
                 `;
             });
         }
 
-        // Laad de lijst met vinkjes voor aanwezigheid
+        // Aanwezigheidslijst laden
         function loadAanwezigheidsLijst() {
             const groep = document.getElementById('filter-groep').value;
             const datum = document.getElementById('les-datum').value;
             const container = document.getElementById('aanwezigheids-lijst');
             container.innerHTML = '';
 
-            const gefilterdeLeden = database.leden.filter(lid => lid.groep === groep);
+            // Filter leden van geselecteerde groep en sorteer op naam
+            const gefilterdeLeden = database.leden
+                .filter(lid => lid.groep === groep)
+                .sort((a, b) => a.naam.localeCompare(b.naam));
 
             if(gefilterdeLeden.length === 0) {
-                container.innerHTML = '<p>Geen leden gevonden in deze groep. Voeg ze eerst toe bij Ledenbeheer.</p>';
+                container.innerHTML = '<p style="color:#7f8c8d; font-style:italic;">Geen leden gevonden in deze groep. Voeg eerst leden toe via het Ledenbeheer tabblad.</p>';
                 return;
             }
 
-            // Check of er al data is voor deze datum + groep
             const key = `${datum}_${groep}`;
             const bestaandeAanwezigheid = database.aanwezigheden[key] || [];
 
@@ -223,20 +334,20 @@
                 const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
                 container.innerHTML += `
                     <div class="presence-row">
-                        <span>${lid.naam}</span>
-                        <input type="checkbox" value="${lid.id}" ${isAanwezig ? 'checked' : ''} style="width:auto; transform: scale(1.4);">
+                        <span><strong>${lid.naam}</strong> ${lid.voornaam}</span>
+                        <input type="checkbox" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
                     </div>
                 `;
             });
         }
 
-        // Sla aanwezigheid op
+        // Opslaan van de vinkjes
         function saveAanwezigheid() {
             const groep = document.getElementById('filter-groep').value;
             const datum = document.getElementById('les-datum').value;
             
             if(!datum) {
-                alert("Kies eerst een datum!");
+                alert("Kies een geldige datum!");
                 return;
             }
 
@@ -252,10 +363,10 @@
             const key = `${datum}_${groep}`;
             database.aanwezigheden[key] = aanwezigeLidIds;
             saveDB();
-            alert("Aanwezigheden succesvol opgeslagen!");
+            alert(`Aanwezigheden voor ${groep} op ${datum.split('-').reverse().join('-')} zijn opgeslagen!`);
         }
 
-        // Eerste opstart
+        // Start applicatie
         renderLeden();
     </script>
 </body>
