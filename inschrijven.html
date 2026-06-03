@@ -15,7 +15,7 @@
         input[type="checkbox"] { width: auto; transform: scale(1.2); margin-right: 10px; }
         button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button:hover { background: #34495e; }
-        .hidden-pot { display: none !important; } /* Onzichtbaar voor mensen, verleidelijk voor bots */
+        .hidden-pot { display: none !important; }
     </style>
 </head>
 <body>
@@ -101,10 +101,9 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // VERVANG DIT DOOR JOUW EIGEN FIREBASE CONFIGURATIE VAN GOOGLE!
         const firebaseConfig = {
             apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
             authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
@@ -120,14 +119,12 @@
         document.getElementById('inschrijf-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // 1. Anti-bot Controle (Honeypot)
             if (document.getElementById('robot-check').value !== "") {
                 console.log("Bot gedetecteerd.");
                 alert("Er is iets misgegaan bij het verzenden.");
-                return; // Stopt de inschrijving geruisloos
+                return;
             }
 
-            // 2. Extra validatiecontrole in de code
             const email1 = document.getElementById('lid-email1').value.trim();
             const voornaam = document.getElementById('lid-voornaam').value.trim();
             const naam = document.getElementById('lid-naam').value.trim();
@@ -142,7 +139,6 @@
                 return;
             }
 
-            // Knop uitschakelen tegen dubbel klikken
             const btn = document.getElementById('submit-btn');
             btn.disabled = true;
             btn.innerText = "Verzenden...";

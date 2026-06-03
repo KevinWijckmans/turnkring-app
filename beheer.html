@@ -85,10 +85,9 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // VERVANG DIT DOOR JOUW EIGEN FIREBASE CONFIGURATIE VAN GOOGLE!
         const firebaseConfig = {
             apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
             authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
@@ -103,7 +102,6 @@
 
         let alleLeden = [];
 
-        // Live synchronisatie met Firebase database
         onSnapshot(collection(db, "leden"), (snapshot) => {
             alleLeden = [];
             snapshot.forEach(doc => {
@@ -115,6 +113,7 @@
 
         function renderLeden() {
             const tbody = document.getElementById('leden-lijst-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
             
             alleLeden.sort((a,b) => a.naam.localeCompare(b.naam));
@@ -132,12 +131,11 @@
                         <td>${lid.geboortedatum}</td>
                         <td>📧 ${lid.email1}<br>📞 ${lid.tel1}</td>
                         <td>${lid.marketing ? '✅ Ja' : '❌ Nee'}</td>
-                        <td><button class="btn" style="background:#e74c3c" data-id="${lid.id}" class="delete-btn">Verwijder</button></td>
+                        <td><button class="btn" style="background:#e74c3c" data-id="${lid.id}">Verwijder</button></td>
                     </tr>
                 `;
             });
 
-            // Koppel wis-functies aan knoppen
             tbody.querySelectorAll('button').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     if(confirm("Lid permanent verwijderen?")) {
@@ -190,7 +188,6 @@
             alert("Aanwezigheden live opgeslagen!");
         }
 
-        // Event listeners voor navigatie en filters
         document.getElementById('filter-groep').addEventListener('change', loadAanwezigheidsLijst);
         document.getElementById('les-datum').addEventListener('change', loadAanwezigheidsLijst);
         document.getElementById('save-presence-btn').addEventListener('click', saveAanwezigheid);
