@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnkring Jong en Vrij - Ledenbeheer</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --success: #2ecc71;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light);
+            color: #333;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background: #34495e;
+        }
+        nav button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        nav button:hover, nav button.active {
+            background-color: var(--accent);
+        }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        /* Formulier & Knoppen */
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input, select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button.btn { background-color: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
+        button.btn:hover { opacity: 0.9; }
+
+        /* Tabellen en Lijsten */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: var(--primary); color: white; }
+        .flex-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .presence-row { display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #eee; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Turnkring Jong en Vrij</h1>
+        <p>Ledenbeheer & Aanwezigheden</p>
+    </header>
+
+    <nav>
+        <button onclick="showSection('leden')" id="btn-leden" class="active">Ledenbeheer</button>
+        <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid">Aanwezigheden</button>
+    </nav>
+
+    <div class="container">
+        <div id="section-leden" class="section active">
+            <h2>Nieuw Lid Toevoegen</h2>
+            <form id="lid-form" onsubmit="addLid(event)">
+                <div class="form-group">
+                    <label>Naam Lid:</label>
+                    <input type="text" id="lid-naam" required placeholder="Bijv. Jan Janssens">
+                </div>
+                <div class="form-group">
+                    <label>Groep / Les:</label>
+                    <select id="lid-groep" required>
+                        <option value="Kleuters">Kleuters</option>
+                        <option value="Precompetitie">Precompetitie</option>
+                        <option value="Juffers">Juffers</option>
+                        <option value="Recreanten">Recreanten</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Lid Opslaan</button>
+            </form>
+
+            <h2>Ledenlijst</h2>
+            <table id="leden-tabel">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Groep</th>
+                        <th>Actie</th>
+                    </tr>
+                </thead>
+                <tbody id="leden-lijst-body"></tbody>
+            </table>
+        </div>
+
+        <div id="section-aanwezigheid" class="section">
+            <h2>Aanwezigheden Registreren</h2>
+            <div class="flex-row">
+                <div style="flex: 1;">
+                    <label>Kies Groep:</label>
+                    <select id="filter-groep" onchange="loadAanwezigheidsLijst()">
+                        <option value="Kleuters">Kleuters</option>
+                        <option value="Precompetitie">Precompetitie</option>
+                        <option value="Juffers">Juffers</option>
+                        <option value="Recreanten">Recreanten</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label>Datum Les:</label>
+                    <input type="date" id="les-datum" required>
+                </div>
+            </div>
+
+            <div id="aanwezigheids-lijst">
+                </div>
+            <br>
+            <button class="btn" onclick="saveAanwezigheid()">Aanwezigheden Opslaan</button>
+        </div>
+    </div>
+
+    <script>
+        // Lokale database simulatie (Slaat op in je browser via LocalStorage)
+        // Zodat je direct kunt testen zonder ingewikkelde servers!
+        let database = JSON.parse(localStorage.getItem('turnkring_db')) || { leden: [], aanwezigheden: {} };
+
+        function saveDB() {
+            localStorage.setItem('turnkring_db', JSON.stringify(database));
+        }
+
+        // Navigatie tussen tabbladen
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`section-${sectionId}`).classList.add('active');
+            document.getElementById(`btn-${sectionId}`).classList.add('active');
+
+            if(sectionId === 'aanwezigheid') {
+                // Zet datum standaard op vandaag
+                if(!document.getElementById('les-datum').value) {
+                    document.getElementById('les-datum').value = new Date().toISOString().split('T')[0];
+                }
+                loadAanwezigheidsLijst();
+            } else {
+                renderLeden();
+            }
+        }
+
+        // Lid Toevoegen
+        function addLid(e) {
+            e.preventDefault();
+            const naam = document.getElementById('lid-naam').value;
+            const groep = document.getElementById('lid-groep').value;
+            const id = Date.now().toString(); // Unieke ID
+
+            database.leden.push({ id, naam, groep });
+            saveDB();
+            renderLeden();
+            document.getElementById('lid-form').reset();
+        }
+
+        // Lid Verwijderen
+        function deleteLid(id) {
+            if(confirm("Weet je zeker dat je dit lid wilt verwijderen?")) {
+                database.leden = database.leden.filter(lid => lid.id !== id);
+                saveDB();
+                renderLeden();
+            }
+        }
+
+        // Toon leden in tabel
+        function renderLeden() {
+            const tbody = document.getElementById('leden-lijst-body');
+            tbody.innerHTML = '';
+            database.leden.forEach(lid => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${lid.naam}</td>
+                        <td>${lid.groep}</td>
+                        <td><button onclick="deleteLid('${lid.id}')" style="background:#e74c3c; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Verwijder</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Laad de lijst met vinkjes voor aanwezigheid
+        function loadAanwezigheidsLijst() {
+            const groep = document.getElementById('filter-groep').value;
+            const datum = document.getElementById('les-datum').value;
+            const container = document.getElementById('aanwezigheids-lijst');
+            container.innerHTML = '';
+
+            const gefilterdeLeden = database.leden.filter(lid => lid.groep === groep);
+
+            if(gefilterdeLeden.length === 0) {
+                container.innerHTML = '<p>Geen leden gevonden in deze groep. Voeg ze eerst toe bij Ledenbeheer.</p>';
+                return;
+            }
+
+            // Check of er al data is voor deze datum + groep
+            const key = `${datum}_${groep}`;
+            const bestaandeAanwezigheid = database.aanwezigheden[key] || [];
+
+            gefilterdeLeden.forEach(lid => {
+                const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
+                container.innerHTML += `
+                    <div class="presence-row">
+                        <span>${lid.naam}</span>
+                        <input type="checkbox" value="${lid.id}" ${isAanwezig ? 'checked' : ''} style="width:auto; transform: scale(1.4);">
+                    </div>
+                `;
+            });
+        }
+
+        // Sla aanwezigheid op
+        function saveAanwezigheid() {
+            const groep = document.getElementById('filter-groep').value;
+            const datum = document.getElementById('les-datum').value;
+            
+            if(!datum) {
+                alert("Kies eerst een datum!");
+                return;
+            }
+
+            const checkboxes = document.querySelectorAll('#aanwezigheids-lijst input[type="checkbox"]');
+            const aanwezigeLidIds = [];
+
+            checkboxes.forEach(cb => {
+                if(cb.checked) {
+                    aanwezigeLidIds.push(cb.value);
+                }
+            });
+
+            const key = `${datum}_${groep}`;
+            database.aanwezigheden[key] = aanwezigeLidIds;
+            saveDB();
+            alert("Aanwezigheden succesvol opgeslagen!");
+        }
+
+        // Eerste opstart
+        renderLeden();
+    </script>
+</body>
+</html>
