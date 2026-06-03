@@ -84,11 +84,11 @@
 
         <div class="container">
             
-            <!-- SECTIE 1: LEDEN (NU MET FILTERS!) -->
+            <!-- SECTIE 1: LEDEN -->
             <div id="section-leden" class="section active">
                 <h2>Geregistreerde Leden via website</h2>
                 
-                <!-- FILTER BALK -->
+                <!-- FILTER BALK + EXPORT KNOP -->
                 <div class="filter-bar">
                     <div class="filter-group" style="flex: 2;">
                         <label for="search-leden">Zoek op naam, e-mail of telefoon:</label>
@@ -119,6 +119,12 @@
                             <option value="betaald">Alleen Betaald ✅</option>
                             <option value="onbetaald">Alleen Niet betaald ❌</option>
                         </select>
+                    </div>
+                    <!-- DE EXPORT KNOP -->
+                    <div class="filter-group" style="min-width: auto; flex: 0;">
+                        <button class="btn" id="export-excel-btn" style="background-color: #2ecc71; height: 38px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                            📥 Excel Export
+                        </button>
                     </div>
                 </div>
 
@@ -297,30 +303,21 @@
             }, (error) => console.error("Databasefout: ", error));
         }
 
-        // HIER WORDEN DE FILTERS LIVE TOEGEPAST
-        function renderLeden() {
-            const tbody = document.getElementById('leden-lijst-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            
-            // Haal de gekozen waarden uit de filterbalk op
+        // DE HOOFDFUNCTIE DIE DE ARRAYS FILTERT
+        function getGefilterdeLedenLijst() {
             const zoekTerm = document.getElementById('search-leden').value.toLowerCase().trim();
             const gekozenGroep = document.getElementById('filter-leden-groep').value;
             const gekozenLidgeld = document.getElementById('filter-leden-lidgeld').value;
 
-            // Filter de array met leden op basis van de keuzes
-            const gefilterdeLeden = alleLeden.filter(lid => {
-                // 1. Filter op zoekbalk (naam, e-mail of telefoon)
+            return alleLeden.filter(lid => {
                 const matchZoek = !zoekTerm || 
                     (lid.naam && lid.naam.toLowerCase().includes(zoekTerm)) ||
                     (lid.voornaam && lid.voornaam.toLowerCase().includes(zoekTerm)) ||
                     (lid.email1 && lid.email1.toLowerCase().includes(zoekTerm)) ||
                     (lid.tel1 && lid.tel1.includes(zoekTerm));
 
-                // 2. Filter op specifieke groep
                 const matchGroep = gekozenGroep === 'alle' || lid.groep === gekozenGroep;
 
-                // 3. Filter op lidgeld status
                 const betaaldStatus = lid.lidgeldBetaald || false;
                 const matchLidgeld = gekozenLidgeld === 'alle' || 
                     (gekozenLidgeld === 'betaald' && betaaldStatus === true) ||
@@ -328,7 +325,14 @@
 
                 return matchZoek && matchGroep && matchLidgeld;
             });
+        }
 
+        function renderLeden() {
+            const tbody = document.getElementById('leden-lijst-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            const gefilterdeLeden = getGefilterdeLedenLijst();
             gefilterdeLeden.sort((a,b) => a.naam.localeCompare(b.naam));
 
             if(gefilterdeLeden.length === 0) {
@@ -353,7 +357,6 @@
                 `;
             });
 
-            // Handlers voor knoppen terugkoppelen
             tbody.querySelectorAll('.btn-status').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.target.dataset.id;
@@ -369,6 +372,57 @@
                     }
                 });
             });
+        }
+
+        // --- EXPORT FUNCTIE NAAR EXCEL (CSV DIE DIRECT GOED OPENT) ---
+        function exportToExcel() {
+            const dataToExport = getGefilterdeLedenLijst();
+            if(dataToExport.length === 0) {
+                alert("Er valt niks te exporteren. Pas je filters aan.");
+                return;
+            }
+
+            dataToExport.sort((a,b) => a.naam.localeCompare(b.naam));
+
+            // Kolomtitels (Excel-vriendelijk)
+            const headers = ["Naam", "Voornaam", "Groep", "Geboortedatum", "Email 1", "Telefoon 1", "Foto Toestemming", "Marketing Mail", "Lidgeld Status"];
+            
+            // Bouw de rijen op (we gebruiken een 'Semicolon ;' omdat de Nederlandstalige Excel dat eist om direct kolommen te maken)
+            let csvContent = "sep=;\n" + headers.join(";") + "\n";
+
+            dataToExport.forEach(lid => {
+                const betaald = lid.lidgeldBetaald ? "Betaald" : "Niet betaald";
+                const foto = lid.fotosToestemming ? "Ja" : "Nee";
+                const mail = lid.marketing ? "Ja" : "Nee";
+                
+                const rij = [
+                    lid.naam || "",
+                    lid.voornaam || "",
+                    lid.groep || "",
+                    lid.geboortedatum || "",
+                    lid.email1 || "",
+                    lid.tel1 || "",
+                    foto,
+                    mail,
+                    betaald
+                ];
+                
+                // Zorg dat eventuele gekke tekens of komma's Excel niet slopen
+                const opgeschoondeRij = rij.map(veld => `"${String(veld).replace(/"/g, '""')}"`);
+                csvContent += opgeschoondeRij.join(";") + "\n";
+            });
+
+            // Bestand triggeren als download
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Ledenlijst_Jong_en_Vrij_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         async function loadAanwezigheidsLijst() {
@@ -573,10 +627,13 @@
             });
         }
 
-        // EVENT LISTENERS VOOR DE NIEUWE FILTERS IN DE LEDENLIJST
+        // EVENT LISTENERS VOOR DE FILTERS
         document.getElementById('search-leden').addEventListener('input', renderLeden);
         document.getElementById('filter-leden-groep').addEventListener('change', renderLeden);
         document.getElementById('filter-leden-lidgeld').addEventListener('change', renderLeden);
+        
+        // EVENT LISTENER VOOR DE EXPORT BUTTON
+        document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
 
         // Event listeners voor aanwezigheden & stats
         document.getElementById('filter-groep').addEventListener('change', loadAanwezigheidsLijst);
