@@ -16,6 +16,8 @@
         button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button:hover { background: #34495e; }
         .hidden-pot { display: none !important; }
+        .checkbox-group { display: flex; align-items: flex-start; margin-top: 12px; }
+        .checkbox-group label { margin: 0; font-weight: normal; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -24,6 +26,7 @@
         <h2>Inschrijvingsformulier Jong & Vrij</h2>
         <form id="inschrijf-form">
             
+            <!-- Honeypot anti-bot veld -->
             <div class="form-group hidden-pot">
                 <label>Laat dit veld leeg (anti-spam):</label>
                 <input type="text" id="robot-check" autocomplete="off">
@@ -91,10 +94,18 @@
                 <label>E-mail 2 (Optioneel):</label>
                 <input type="email" id="lid-email2">
             </div>
-            <div class="form-group" style="display: flex; align-items: center; margin-top: 15px;">
-                <input type="checkbox" id="lid-marketing">
-                <label for="lid-marketing" style="margin: 0;">Ik wens e-mails te ontvangen van Jong & Vrij i.v.m. activiteiten.</label>
+            
+            <!-- Privacy & Marketing -->
+            <div class="checkbox-group">
+                <input type="checkbox" id="lid-fotos">
+                <label for="lid-fotos">Ik geef toestemming dat er <strong>foto's/video's</strong> van het lid gemaakt en gepubliceerd mogen worden op de website of sociale media van Jong & Vrij.</label>
             </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="lid-marketing">
+                <label for="lid-marketing">Ik wens <strong>e-mails</strong> te ontvangen van Jong & Vrij i.v.m. activiteiten en nieuws.</label>
+            </div>
+            
             <br>
             <button type="submit" id="submit-btn">Inschrijven</button>
         </form>
@@ -129,16 +140,6 @@
             const voornaam = document.getElementById('lid-voornaam').value.trim();
             const naam = document.getElementById('lid-naam').value.trim();
 
-            if (voornaam.length < 2 || naam.length < 2) {
-                alert("Vul aub een geldige voornaam en naam in.");
-                return;
-            }
-
-            if (!email1.includes('@') || !email1.includes('.')) {
-                alert("Vul aub een geldig e-mailadres in.");
-                return;
-            }
-
             const btn = document.getElementById('submit-btn');
             btn.disabled = true;
             btn.innerText = "Verzenden...";
@@ -156,7 +157,9 @@
                     tel2: document.getElementById('lid-tel2').value,
                     email1: email1,
                     email2: document.getElementById('lid-email2').value,
+                    fotosToestemming: document.getElementById('lid-fotos').checked,
                     marketing: document.getElementById('lid-marketing').checked,
+                    lidgeldBetaald: false, // Standaard staat dit bij inschrijving op FALSE
                     inschrijfDatum: new Date().toISOString()
                 });
 

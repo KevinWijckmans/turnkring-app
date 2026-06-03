@@ -5,23 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beheer - Turnkring Jong en Vrij</title>
     <style>
-        :root { --primary: #2c3e50; --accent: #e74c3c; --light: #ecf0f1; }
+        :root { --primary: #2c3e50; --accent: #e74c3c; --light: #ecf0f1; --success: #2ecc71; }
         body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); }
-        header { background-color: var(--primary); color: white; padding: 15px; text-align: center; }
+        header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: relative; }
         nav { display: flex; justify-content: center; background: #34495e; }
         nav button { background: none; border: none; color: white; padding: 15px 25px; cursor: pointer; font-size: 1rem; }
         nav button:hover, nav button.active { background-color: var(--accent); }
-        .container { max-width: 1000px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .container { max-width: 1100px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .section { display: none; }
         .section.active { display: block; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 0.95rem; }
         th { background-color: var(--primary); color: white; }
         .flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .presence-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
-        .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-status { padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .status-paid { background-color: var(--success); }
+        .status-unpaid { background-color: var(--accent); }
         
-        /* Login Scherm */
         #login-screen { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -31,6 +33,7 @@
 </head>
 <body>
 
+    <!-- INLOGSCHERM -->
     <div id="login-screen">
         <h2>Inloggen Trainers</h2>
         <form id="login-form">
@@ -46,10 +49,11 @@
         </form>
     </div>
 
+    <!-- HOOFDAPPLICATIE -->
     <div id="app-content">
         <header>
             <h1>Jong en Vrij - Beheerderspaneel</h1>
-            <button class="btn" id="logout-btn" style="background: var(--accent); position: absolute; top: 20px; right: 20px;">Uitloggen</button>
+            <button class="btn" id="logout-btn" style="background: var(--accent); position: absolute; top: 15px; right: 20px;">Uitloggen</button>
         </header>
 
         <nav>
@@ -67,12 +71,13 @@
                             <th>Groep</th>
                             <th>Geboortedatum</th>
                             <th>Contact</th>
-                            <th>Nieuwsbrief?</th>
+                            <th>Toestemmingen</th>
+                            <th>Lidgeld</th>
                             <th>Actie</th>
                         </tr>
                     </thead>
                     <tbody id="leden-lijst-body">
-                        <tr><td colspan="6">Leden laden...</td></tr>
+                        <tr><td colspan="7">Leden laden...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -111,7 +116,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -130,7 +135,6 @@
         let alleLeden = [];
         let unsubscribeLeden = null;
 
-        // Luister of een gebruiker is ingelogd of uitgelogd
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('login-screen').style.display = 'none';
@@ -139,26 +143,17 @@
             } else {
                 document.getElementById('login-screen').style.display = 'block';
                 document.getElementById('app-content').style.display = 'none';
-                if(unsubscribeLeden) unsubscribeLeden(); // Stop met luisteren naar database bij uitloggen
+                if(unsubscribeLeden) unsubscribeLeden();
             }
         });
 
-        // Login formulier afhandelen
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const wachtwoord = document.getElementById('login-wachtwoord').value;
-
-            signInWithEmailAndPassword(auth, email, wachtwoord)
-                .catch(error => {
-                    alert("Fout bij inloggen: " + error.message);
-                });
+            signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-wachtwoord').value)
+                .catch(error => alert("Fout bij inloggen: " + error.message));
         });
 
-        // Uitloggen
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            signOut(auth);
-        });
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
         function startLiveSync() {
             unsubscribeLeden = onSnapshot(collection(db, "leden"), (snapshot) => {
@@ -168,9 +163,7 @@
                 });
                 renderLeden();
                 loadAanwezigheidsLijst();
-            }, (error) => {
-                console.error("Databasefout: ", error);
-            });
+            }, (error) => console.error("Databasefout: ", error));
         }
 
         function renderLeden() {
@@ -181,27 +174,53 @@
             alleLeden.sort((a,b) => a.naam.localeCompare(b.naam));
 
             if(alleLeden.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6">Nog geen inschrijvingen ontvangen.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7">Nog geen inschrijvingen ontvangen.</td></tr>';
                 return;
             }
 
             alleLeden.forEach(lid => {
+                // Checken of we oudere records hebben zonder de nieuwe 'fotosToestemming' variabele
+                const magOpFoto = lid.fotosToestemming !== undefined ? lid.fotosToestemming : false;
+                const betaald Status = lid.lidgeldBetaald || false;
+
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${lid.naam}</strong> ${lid.voornaam}</td>
                         <td>${lid.groep}</td>
                         <td>${lid.geboortedatum}</td>
                         <td>📧 ${lid.email1}<br>📞 ${lid.tel1}</td>
-                        <td>${lid.marketing ? '✅ Ja' : '❌ Nee'}</td>
-                        <td><button class="btn" style="background:#e74c3c" data-id="${lid.id}">Verwijder</button></td>
+                        <td>
+                            📸 Foto's: ${magOpFoto ? '✅' : '❌'}<br>
+                            📧 Mailings: ${lid.marketing ? '✅' : '❌'}
+                        </td>
+                        <td>
+                            <button class="btn-status ${betaaldStatus ? 'status-paid' : 'status-unpaid'}" data-id="${lid.id}" data-status="${betaaldStatus}">
+                                ${betaaldStatus ? 'Betaald ✅' : 'Niet betaald ❌'}
+                            </button>
+                        </td>
+                        <td><button class="btn" style="background:#e74c3c; padding: 5px 10px;" data-delete="${lid.id}">X</button></td>
                     </tr>
                 `;
             });
 
-            tbody.querySelectorAll('button').forEach(btn => {
+            // Event Listeners voor de Lidgeld Status Knop
+            tbody.querySelectorAll('.btn-status').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.target.dataset.id;
+                    const huidigeStatus = e.target.dataset.status === 'true';
+                    
+                    // Schakel de status om in de database
+                    await updateDoc(doc(db, "leden", id), {
+                        lidgeldBetaald: !huidigeStatus
+                    });
+                });
+            });
+
+            // Event Listeners voor Verwijderknop
+            tbody.querySelectorAll('button[data-delete]').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     if(confirm("Lid permanent verwijderen?")) {
-                        await deleteDoc(doc(db, "leden", e.target.dataset.id));
+                        await deleteDoc(doc(db, "leden", e.target.dataset.delete));
                     }
                 });
             });
@@ -221,9 +240,8 @@
             }
 
             const key = `${datum}_${groep}`;
-            const docRef = doc(db, "aanwezigheden", key);
             try {
-                const docSnap = await getDoc(docRef);
+                const docSnap = await getDoc(doc(db, "aanwezigheden", key));
                 const bestaandeAanwezigheid = docSnap.exists() ? docSnap.data().aanwezigen : [];
 
                 gefilterdeLeden.forEach(lid => {
@@ -236,7 +254,7 @@
                     `;
                 });
             } catch (e) {
-                container.innerHTML = '<p>Log eerst in om de aanwezigheden te laden.</p>';
+                container.innerHTML = '<p>Fout bij laden aanwezigheden.</p>';
             }
         }
 
@@ -254,14 +272,13 @@
                 await setDoc(doc(db, "aanwezigheden", key), { aanwezigen: aanwezigeIds });
                 alert("Aanwezigheden live opgeslagen!");
             } catch(e) {
-                alert("Niet toegestaan. Ben je wel ingelogd?");
+                alert("Niet toegestaan.");
             }
         }
 
         document.getElementById('filter-groep').addEventListener('change', loadAanwezigheidsLijst);
         document.getElementById('les-datum').addEventListener('change', loadAanwezigheidsLijst);
         document.getElementById('save-presence-btn').addEventListener('click', saveAanwezigheid);
-        
         document.getElementById('les-datum').value = new Date().toISOString().split('T')[0];
 
         window.showSection = function(sectionId) {
