@@ -20,73 +20,99 @@
         .flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .presence-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
         .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        
+        /* Login Scherm */
+        #login-screen { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        #app-content { display: none; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Jong en Vrij - Beheerderspaneel</h1>
-    </header>
-
-    <nav>
-        <button onclick="showSection('leden')" id="btn-leden" class="active">Ledenlijst (Live)</button>
-        <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid">Aanwezigheden</button>
-    </nav>
-
-    <div class="container">
-        <div id="section-leden" class="section active">
-            <h2>Geregistreerde Leden via website</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Naam & Voornaam</th>
-                        <th>Groep</th>
-                        <th>Geboortedatum</th>
-                        <th>Contact</th>
-                        <th>Nieuwsbrief?</th>
-                        <th>Actie</th>
-                    </tr>
-                </thead>
-                <tbody id="leden-lijst-body">
-                    <tr><td colspan="6">Leden laden...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div id="section-aanwezigheid" class="section">
-            <h2>Aanwezigheden Registreren</h2>
-            <div class="flex-row">
-                <div style="flex: 1;">
-                    <label>Kies Groep:</label>
-                    <select id="filter-groep">
-                        <option value="Kleuters">Kleuters</option>
-                        <option value="Meisjes 1">Meisjes 1</option>
-                        <option value="Meisjes 2">Meisjes 2</option>
-                        <option value="Jongens">Jongens</option>
-                        <option value="Juffers 1">Juffers 1</option>
-                        <option value="Juffers 2">Juffers 2</option>
-                        <option value="Knapen">Knapen</option>
-                        <option value="Turnsters en turners">Turnsters en turners</option>
-                        <option value="Skippies">Skippies</option>
-                        <option value="Jumpers">Jumpers</option>
-                        <option value="Demo Team">Demo Team</option>
-                        <option value="Dance Adults">Dance Adults</option>
-                    </select>
-                </div>
-                <div style="flex: 1;">
-                    <label>Datum Les:</label>
-                    <input type="date" id="les-datum">
-                </div>
+    <div id="login-screen">
+        <h2>Inloggen Trainers</h2>
+        <form id="login-form">
+            <div class="form-group">
+                <label>E-mailadres:</label>
+                <input type="email" id="login-email" required>
             </div>
-            <div id="aanwezigheids-lijst"></div>
-            <br>
-            <button class="btn" id="save-presence-btn">Aanwezigheden Opslaan</button>
+            <div class="form-group">
+                <label>Wachtwoord:</label>
+                <input type="password" id="login-wachtwoord" required>
+            </div>
+            <button type="submit" class="btn" style="width: 100%;">Inloggen</button>
+        </form>
+    </div>
+
+    <div id="app-content">
+        <header>
+            <h1>Jong en Vrij - Beheerderspaneel</h1>
+            <button class="btn" id="logout-btn" style="background: var(--accent); position: absolute; top: 20px; right: 20px;">Uitloggen</button>
+        </header>
+
+        <nav>
+            <button onclick="showSection('leden')" id="btn-leden" class="active">Ledenlijst (Live)</button>
+            <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid">Aanwezigheden</button>
+        </nav>
+
+        <div class="container">
+            <div id="section-leden" class="section active">
+                <h2>Geregistreerde Leden via website</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Naam & Voornaam</th>
+                            <th>Groep</th>
+                            <th>Geboortedatum</th>
+                            <th>Contact</th>
+                            <th>Nieuwsbrief?</th>
+                            <th>Actie</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leden-lijst-body">
+                        <tr><td colspan="6">Leden laden...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="section-aanwezigheid" class="section">
+                <h2>Aanwezigheden Registreren</h2>
+                <div class="flex-row">
+                    <div style="flex: 1;">
+                        <label>Kies Groep:</label>
+                        <select id="filter-groep">
+                            <option value="Kleuters">Kleuters</option>
+                            <option value="Meisjes 1">Meisjes 1</option>
+                            <option value="Meisjes 2">Meisjes 2</option>
+                            <option value="Jongens">Jongens</option>
+                            <option value="Juffers 1">Juffers 1</option>
+                            <option value="Juffers 2">Juffers 2</option>
+                            <option value="Knapen">Knapen</option>
+                            <option value="Turnsters en turners">Turnsters en turners</option>
+                            <option value="Skippies">Skippies</option>
+                            <option value="Jumpers">Jumpers</option>
+                            <option value="Demo Team">Demo Team</option>
+                            <option value="Dance Adults">Dance Adults</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Datum Les:</label>
+                        <input type="date" id="les-datum">
+                    </div>
+                </div>
+                <div id="aanwezigheids-lijst"></div>
+                <br>
+                <button class="btn" id="save-presence-btn">Aanwezigheden Opslaan</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
@@ -99,17 +125,53 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         let alleLeden = [];
+        let unsubscribeLeden = null;
 
-        onSnapshot(collection(db, "leden"), (snapshot) => {
-            alleLeden = [];
-            snapshot.forEach(doc => {
-                alleLeden.push({ id: doc.id, ...doc.data() });
-            });
-            renderLeden();
-            loadAanwezigheidsLijst();
+        // Luister of een gebruiker is ingelogd of uitgelogd
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                startLiveSync();
+            } else {
+                document.getElementById('login-screen').style.display = 'block';
+                document.getElementById('app-content').style.display = 'none';
+                if(unsubscribeLeden) unsubscribeLeden(); // Stop met luisteren naar database bij uitloggen
+            }
         });
+
+        // Login formulier afhandelen
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const wachtwoord = document.getElementById('login-wachtwoord').value;
+
+            signInWithEmailAndPassword(auth, email, wachtwoord)
+                .catch(error => {
+                    alert("Fout bij inloggen: " + error.message);
+                });
+        });
+
+        // Uitloggen
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        function startLiveSync() {
+            unsubscribeLeden = onSnapshot(collection(db, "leden"), (snapshot) => {
+                alleLeden = [];
+                snapshot.forEach(doc => {
+                    alleLeden.push({ id: doc.id, ...doc.data() });
+                });
+                renderLeden();
+                loadAanwezigheidsLijst();
+            }, (error) => {
+                console.error("Databasefout: ", error);
+            });
+        }
 
         function renderLeden() {
             const tbody = document.getElementById('leden-lijst-body');
@@ -160,18 +222,22 @@
 
             const key = `${datum}_${groep}`;
             const docRef = doc(db, "aanwezigheden", key);
-            const docSnap = await getDoc(docRef);
-            const bestaandeAanwezigheid = docSnap.exists() ? docSnap.data().aanwezigen : [];
+            try {
+                const docSnap = await getDoc(docRef);
+                const bestaandeAanwezigheid = docSnap.exists() ? docSnap.data().aanwezigen : [];
 
-            gefilterdeLeden.forEach(lid => {
-                const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
-                container.innerHTML += `
-                    <div class="presence-row">
-                        <span><strong>${lid.naam}</strong> ${lid.voornaam}</span>
-                        <input type="checkbox" class="presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
-                    </div>
-                `;
-            });
+                gefilterdeLeden.forEach(lid => {
+                    const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
+                    container.innerHTML += `
+                        <div class="presence-row">
+                            <span><strong>${lid.naam}</strong> ${lid.voornaam}</span>
+                            <input type="checkbox" class="presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                container.innerHTML = '<p>Log eerst in om de aanwezigheden te laden.</p>';
+            }
         }
 
         async function saveAanwezigheid() {
@@ -184,8 +250,12 @@
             checkboxes.forEach(cb => { if(cb.checked) aanwezigeIds.push(cb.value); });
 
             const key = `${datum}_${groep}`;
-            await setDoc(doc(db, "aanwezigheden", key), { aanwezigen: aanwezigeIds });
-            alert("Aanwezigheden live opgeslagen!");
+            try {
+                await setDoc(doc(db, "aanwezigheden", key), { aanwezigen: aanwezigeIds });
+                alert("Aanwezigheden live opgeslagen!");
+            } catch(e) {
+                alert("Niet toegestaan. Ben je wel ingelogd?");
+            }
         }
 
         document.getElementById('filter-groep').addEventListener('change', loadAanwezigheidsLijst);
