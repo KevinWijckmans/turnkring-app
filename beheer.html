@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beheer - Turnkring Jong en Vrij</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e74c3c; --light: #ecf0f1; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); }
+        header { background-color: var(--primary); color: white; padding: 15px; text-align: center; }
+        nav { display: flex; justify-content: center; background: #34495e; }
+        nav button { background: none; border: none; color: white; padding: 15px 25px; cursor: pointer; font-size: 1rem; }
+        nav button:hover, nav button.active { background-color: var(--accent); }
+        .container { max-width: 1000px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .section { display: none; }
+        .section.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: var(--primary); color: white; }
+        .flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .presence-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
+        .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Jong en Vrij - Beheerderspaneel</h1>
+    </header>
+
+    <nav>
+        <button onclick="showSection('leden')" id="btn-leden" class="active">Ledenlijst (Live)</button>
+        <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid">Aanwezigheden</button>
+    </nav>
+
+    <div class="container">
+        <div id="section-leden" class="section active">
+            <h2>Geregistreerde Leden via website</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Naam & Voornaam</th>
+                        <th>Groep</th>
+                        <th>Geboortedatum</th>
+                        <th>Contact</th>
+                        <th>Nieuwsbrief?</th>
+                        <th>Actie</th>
+                    </tr>
+                </thead>
+                <tbody id="leden-lijst-body">
+                    <tr><td colspan="6">Leden laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="section-aanwezigheid" class="section">
+            <h2>Aanwezigheden Registreren</h2>
+            <div class="flex-row">
+                <div style="flex: 1;">
+                    <label>Kies Groep:</label>
+                    <select id="filter-groep">
+                        <option value="Kleuters">Kleuters</option>
+                        <option value="Meisjes 1">Meisjes 1</option>
+                        <option value="Meisjes 2">Meisjes 2</option>
+                        <option value="Jongens">Jongens</option>
+                        <option value="Juffers 1">Juffers 1</option>
+                        <option value="Juffers 2">Juffers 2</option>
+                        <option value="Knapen">Knapen</option>
+                        <option value="Turnsters en turners">Turnsters en turners</option>
+                        <option value="Skippies">Skippies</option>
+                        <option value="Jumpers">Jumpers</option>
+                        <option value="Demo Team">Demo Team</option>
+                        <option value="Dance Adults">Dance Adults</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label>Datum Les:</label>
+                    <input type="date" id="les-datum">
+                </div>
+            </div>
+            <div id="aanwezigheids-lijst"></div>
+            <br>
+            <button class="btn" id="save-presence-btn">Aanwezigheden Opslaan</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+
+        // VERVANG DIT DOOR JOUW EIGEN FIREBASE CONFIGURATIE VAN GOOGLE!
+        const firebaseConfig = {
+            apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
+            authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
+            projectId: "turnkring-jong-en-vrij",
+            storageBucket: "turnkring-jong-en-vrij.firebasestorage.app",
+            messagingSenderId: "141385505787",
+            appId: "1:141385505787:web:5a82e6282025cf7be1895e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let alleLeden = [];
+
+        // Live synchronisatie met Firebase database
+        onSnapshot(collection(db, "leden"), (snapshot) => {
+            alleLeden = [];
+            snapshot.forEach(doc => {
+                alleLeden.push({ id: doc.id, ...doc.data() });
+            });
+            renderLeden();
+            loadAanwezigheidsLijst();
+        });
+
+        function renderLeden() {
+            const tbody = document.getElementById('leden-lijst-body');
+            tbody.innerHTML = '';
+            
+            alleLeden.sort((a,b) => a.naam.localeCompare(b.naam));
+
+            if(alleLeden.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">Nog geen inschrijvingen ontvangen.</td></tr>';
+                return;
+            }
+
+            alleLeden.forEach(lid => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${lid.naam}</strong> ${lid.voornaam}</td>
+                        <td>${lid.groep}</td>
+                        <td>${lid.geboortedatum}</td>
+                        <td>📧 ${lid.email1}<br>📞 ${lid.tel1}</td>
+                        <td>${lid.marketing ? '✅ Ja' : '❌ Nee'}</td>
+                        <td><button class="btn" style="background:#e74c3c" data-id="${lid.id}" class="delete-btn">Verwijder</button></td>
+                    </tr>
+                `;
+            });
+
+            // Koppel wis-functies aan knoppen
+            tbody.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    if(confirm("Lid permanent verwijderen?")) {
+                        await deleteDoc(doc(db, "leden", e.target.dataset.id));
+                    }
+                });
+            });
+        }
+
+        async function loadAanwezigheidsLijst() {
+            const groep = document.getElementById('filter-groep').value;
+            const datum = document.getElementById('les-datum').value;
+            const container = document.getElementById('aanwezigheids-lijst');
+            if(!container) return;
+            container.innerHTML = '';
+
+            const gefilterdeLeden = alleLeden.filter(l => l.groep === groep);
+            if(gefilterdeLeden.length === 0) {
+                container.innerHTML = '<p>Geen leden in deze groep.</p>';
+                return;
+            }
+
+            const key = `${datum}_${groep}`;
+            const docRef = doc(db, "aanwezigheden", key);
+            const docSnap = await getDoc(docRef);
+            const bestaandeAanwezigheid = docSnap.exists() ? docSnap.data().aanwezigen : [];
+
+            gefilterdeLeden.forEach(lid => {
+                const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
+                container.innerHTML += `
+                    <div class="presence-row">
+                        <span><strong>${lid.naam}</strong> ${lid.voornaam}</span>
+                        <input type="checkbox" class="presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
+                    </div>
+                `;
+            });
+        }
+
+        async function saveAanwezigheid() {
+            const groep = document.getElementById('filter-groep').value;
+            const datum = document.getElementById('les-datum').value;
+            if(!datum) { alert("Kies een datum!"); return; }
+
+            const checkboxes = document.querySelectorAll('.presence-check');
+            const aanwezigeIds = [];
+            checkboxes.forEach(cb => { if(cb.checked) aanwezigeIds.push(cb.value); });
+
+            const key = `${datum}_${groep}`;
+            await setDoc(doc(db, "aanwezigheden", key), { aanwezigen: aanwezigeIds });
+            alert("Aanwezigheden live opgeslagen!");
+        }
+
+        // Event listeners voor navigatie en filters
+        document.getElementById('filter-groep').addEventListener('change', loadAanwezigheidsLijst);
+        document.getElementById('les-datum').addEventListener('change', loadAanwezigheidsLijst);
+        document.getElementById('save-presence-btn').addEventListener('click', saveAanwezigheid);
+        
+        document.getElementById('les-datum').value = new Date().toISOString().split('T')[0];
+
+        window.showSection = function(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`section-${sectionId}`).classList.add('active');
+            document.getElementById(`btn-${sectionId}`).classList.add('active');
+            if(sectionId === 'aanwezigheid') loadAanwezigheidsLijst();
+        }
+    </script>
+</body>
+</html>

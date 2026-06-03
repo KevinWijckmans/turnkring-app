@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inschrijven - Turnkring Jong en Vrij</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e74c3c; --light: #ecf0f1; }
+        body { font-family: sans-serif; background: var(--light); margin: 0; padding: 20px; }
+        .form-card { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: var(--primary); text-align: center; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input[type="checkbox"] { width: auto; transform: scale(1.2); margin-right: 10px; }
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #34495e; }
+        .hidden-pot { display: none !important; } /* Onzichtbaar voor mensen, verleidelijk voor bots */
+    </style>
+</head>
+<body>
+
+    <div class="form-card">
+        <h2>Inschrijvingsformulier Jong & Vrij</h2>
+        <form id="inschrijf-form">
+            
+            <div class="form-group hidden-pot">
+                <label>Laat dit veld leeg (anti-spam):</label>
+                <input type="text" id="robot-check" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label>Voornaam lid:</label>
+                <input type="text" id="lid-voornaam" required minlength="2" placeholder="Bijv. Sarah">
+            </div>
+            <div class="form-group">
+                <label>Naam lid:</label>
+                <input type="text" id="lid-naam" required minlength="2" placeholder="Bijv. Peeters">
+            </div>
+            <div class="form-group">
+                <label>Geboortedatum:</label>
+                <input type="date" id="lid-geboortedatum" required>
+            </div>
+            <div class="form-group">
+                <label>Geslacht:</label>
+                <select id="lid-geslacht" required>
+                    <option value="">-- Kies --</option>
+                    <option value="V">Vrouw (V)</option>
+                    <option value="M">Man (M)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Kies Groep:</label>
+                <select id="lid-groep" required>
+                    <option value="">-- Kies een groep --</option>
+                    <option value="Kleuters">Kleuters</option>
+                    <option value="Meisjes 1">Meisjes 1</option>
+                    <option value="Meisjes 2">Meisjes 2</option>
+                    <option value="Jongens">Jongens</option>
+                    <option value="Juffers 1">Juffers 1</option>
+                    <option value="Juffers 2">Juffers 2</option>
+                    <option value="Knapen">Knapen</option>
+                    <option value="Turnsters en turners">Turnsters en turners</option>
+                    <option value="Skippies">Skippies</option>
+                    <option value="Jumpers">Jumpers</option>
+                    <option value="Demo Team">Demo Team</option>
+                    <option value="Dance Adults">Dance Adults</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Straat en huisnummer:</label>
+                <input type="text" id="lid-adres" required placeholder="Dorpstraat 12">
+            </div>
+            <div class="form-group">
+                <label>Postcode en gemeente:</label>
+                <input type="text" id="lid-gemeente" required placeholder="2000 Antwerpen">
+            </div>
+            <div class="form-group">
+                <label>Telefoon 1 (Ouder/Lid):</label>
+                <input type="tel" id="lid-tel1" required placeholder="0470 00 00 00">
+            </div>
+            <div class="form-group">
+                <label>Telefoon 2 (Optioneel):</label>
+                <input type="tel" id="lid-tel2">
+            </div>
+            <div class="form-group">
+                <label>E-mail 1:</label>
+                <input type="email" id="lid-email1" required placeholder="naam@email.com">
+            </div>
+            <div class="form-group">
+                <label>E-mail 2 (Optioneel):</label>
+                <input type="email" id="lid-email2">
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; margin-top: 15px;">
+                <input type="checkbox" id="lid-marketing">
+                <label for="lid-marketing" style="margin: 0;">Ik wens e-mails te ontvangen van Jong & Vrij i.v.m. activiteiten.</label>
+            </div>
+            <br>
+            <button type="submit" id="submit-btn">Inschrijven</button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+
+        // VERVANG DIT DOOR JOUW EIGEN FIREBASE CONFIGURATIE VAN GOOGLE!
+        const firebaseConfig = {
+            apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
+            authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
+            projectId: "turnkring-jong-en-vrij",
+            storageBucket: "turnkring-jong-en-vrij.firebasestorage.app",
+            messagingSenderId: "141385505787",
+            appId: "1:141385505787:web:5a82e6282025cf7be1895e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.getElementById('inschrijf-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // 1. Anti-bot Controle (Honeypot)
+            if (document.getElementById('robot-check').value !== "") {
+                console.log("Bot gedetecteerd.");
+                alert("Er is iets misgegaan bij het verzenden.");
+                return; // Stopt de inschrijving geruisloos
+            }
+
+            // 2. Extra validatiecontrole in de code
+            const email1 = document.getElementById('lid-email1').value.trim();
+            const voornaam = document.getElementById('lid-voornaam').value.trim();
+            const naam = document.getElementById('lid-naam').value.trim();
+
+            if (voornaam.length < 2 || naam.length < 2) {
+                alert("Vul aub een geldige voornaam en naam in.");
+                return;
+            }
+
+            if (!email1.includes('@') || !email1.includes('.')) {
+                alert("Vul aub een geldig e-mailadres in.");
+                return;
+            }
+
+            // Knop uitschakelen tegen dubbel klikken
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = "Verzenden...";
+
+            try {
+                await addDoc(collection(db, "leden"), {
+                    voornaam: voornaam,
+                    naam: naam,
+                    geboortedatum: document.getElementById('lid-geboortedatum').value,
+                    geslacht: document.getElementById('lid-geslacht').value,
+                    groep: document.getElementById('lid-groep').value,
+                    adres: document.getElementById('lid-adres').value,
+                    gemeente: document.getElementById('lid-gemeente').value,
+                    tel1: document.getElementById('lid-tel1').value,
+                    tel2: document.getElementById('lid-tel2').value,
+                    email1: email1,
+                    email2: document.getElementById('lid-email2').value,
+                    marketing: document.getElementById('lid-marketing').checked,
+                    inschrijfDatum: new Date().toISOString()
+                });
+
+                alert("Inschrijving succesvol ontvangen! Welkom bij Jong en Vrij.");
+                document.getElementById('inschrijf-form').reset();
+            } catch (error) {
+                console.error("Fout bij opslaan: ", error);
+                alert("Er ging iets mis. Probeer het later opnieuw.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Inschrijven";
+            }
+        });
+    </script>
+</body>
+</html>
