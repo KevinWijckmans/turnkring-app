@@ -57,11 +57,12 @@
             <h2>2. Welk lid steun je?</h2>
             <div class="form-group" style="position: relative;">
                 <label for="steun-lid-input">Typ de naam van de turner/turnster:</label>
-                <input type="text" id="steun-lid-input" autocomplete="off" placeholder="Begin te typen (bijv. Janssens)..." required>
+                <input type="text" id="steun-lid-input" autocomplete="off" placeholder="Typ minstens 3 letters (bijv. Peeters)..." required>
                 
                 <div id="autocomplete-results" style="position: absolute; width: 100%; background: white; border: 1px solid #ccc; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
                 
                 <input type="hidden" id="steun-lid-id" value="">
+                <input type="hidden" id="steun-lid-groep" value="Onbekend/Niet gekoppeld">
             </div>
 
             <h2>3. Kies je lekkers (€3,00 per stuk)</h2>
@@ -91,7 +92,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
@@ -117,8 +118,6 @@
             { id: "frangipane", naam: "Frangipane (12 stuks)" }
         ];
 
-        let geladenLeden = [];
-
         // 1. Bouw de productenlijst in HTML
         const prodContainer = document.getElementById('product-lijst');
         producten.forEach(p => {
@@ -135,68 +134,65 @@
             `;
         });
 
-        // 2. Haal alle leden achter de schermen op (veilig in het geheugen, niet openbaar op het scherm)
-        async function laadLedenData() {
-            try {
-                const querySnapshot = await getDocs(collection(db, "leden"));
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    geladenLeden.push({ id: doc.id, naam: data.naam, voornaam: data.voornaam, groep: data.groep });
-                });
-            } catch (e) {
-                console.error("Fout bij laden ledendata voor autocomplete", e);
-            }
-        }
-        laadLedenData();
-
-        // 3. Autocomplete logica (Zoeken terwijl je typt - GDPR Veilig!)
+        // 2 & 3. Live zoeken in database (GDPR Veilig & aangepast aan Firebase regels)
         const inputVeld = document.getElementById('steun-lid-input');
         const resultsContainer = document.getElementById('autocomplete-results');
         const hiddenIdVeld = document.getElementById('steun-lid-id');
+        const hiddenGroepVeld = document.getElementById('steun-lid-groep');
 
-        inputVeld.addEventListener('input', () => {
-            const zoekTerm = inputVeld.value.toLowerCase().trim();
+        inputVeld.addEventListener('input', async () => {
+            const zoekTerm = inputVeld.value.trim();
             resultsContainer.innerHTML = '';
-            hiddenIdVeld.value = ''; // Reset ID bij elke aanpassing
+            hiddenIdVeld.value = '';
+            hiddenGroepVeld.value = 'Onbekend/Niet gekoppeld';
 
-            if (zoekTerm.length < 2) {
+            // Zoeken vanaf 3 letters om overbelasting te voorkomen
+            if (zoekTerm.length < 3) {
                 resultsContainer.style.display = 'none';
                 return;
             }
 
-            // Filter de lijst intern op basis van wat de koper typt
-            const matches = geladenLeden.filter(lid => 
-                (lid.naam && lid.naam.toLowerCase().includes(zoekTerm)) ||
-                (lid.voornaam && lid.voornaam.toLowerCase().includes(zoekTerm))
-            );
-
-            if (matches.length === 0) {
-                resultsContainer.style.display = 'none';
-                return;
-            }
-
-            // Toon ALLEEN de matches als klikbare opties
-            matches.forEach(lid => {
-                const div = document.createElement('div');
-                div.style.padding = '10px';
-                div.style.cursor = 'pointer';
-                div.style.borderBottom = '1px solid #eee';
-                div.innerText = `${lid.naam} ${lid.voornaam} (${lid.groep})`;
+            try {
+                // Direct gerichte query naar Firestore (Firebase Rules laten dit toe)
+                const q = query(
+                    collection(db, "leden"), 
+                    where("naam", ">=", zoekTerm), 
+                    where("naam", "<=", zoekTerm + "\uf8ff"),
+                    limit(5)
+                );
                 
-                div.addEventListener('click', () => {
-                    inputVeld.value = `${lid.naam} ${lid.voornaam}`;
-                    hiddenIdVeld.value = lid.id; // Koppel het unieke database ID
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
                     resultsContainer.style.display = 'none';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const lid = { id: doc.id, ...doc.data() };
+                    const div = document.createElement('div');
+                    div.style.padding = '10px';
+                    div.style.cursor = 'pointer';
+                    div.style.borderBottom = '1px solid #eee';
+                    div.innerText = `${lid.naam} ${lid.voornaam} (${lid.groep})`;
+                    
+                    div.addEventListener('click', () => {
+                        inputVeld.value = `${lid.naam} ${lid.voornaam}`;
+                        hiddenIdVeld.value = lid.id;
+                        hiddenGroepVeld.value = lid.groep;
+                        resultsContainer.style.display = 'none';
+                    });
+
+                    div.addEventListener('mouseover', () => div.style.background = '#f8f9fa');
+                    div.addEventListener('mouseout', () => div.style.background = 'white');
+                    resultsContainer.appendChild(div);
                 });
 
-                // Hover effectje voor de selectie
-                div.addEventListener('mouseover', () => div.style.background = '#f8f9fa');
-                div.addEventListener('mouseout', () => div.style.background = 'white');
+                resultsContainer.style.display = 'block';
 
-                resultsContainer.appendChild(div);
-            });
-
-            resultsContainer.style.display = 'block';
+            } catch (err) {
+                console.error("Fout bij live zoeken: ", err);
+            }
         });
 
         // Sluit het menuutje als je ergens anders op het scherm klikt
@@ -228,20 +224,11 @@
             }
 
             const geselecteerdLidId = hiddenIdVeld.value;
-            let ingevuldeNaam = inputVeld.value;
-            let lidGroep = "Onbekend/Niet gekoppeld";
-
-            // Als er een match was via de autocomplete, halen we de officiële groepsnaam op
-            if (geselecteerdLidId) {
-                const gevondenLid = geladenLeden.find(l => l.id === geselecteerdLidId);
-                if (gevondenLid) {
-                    ingevuldeNaam = `${gevondenLid.naam} ${gevondenLid.voornaam}`;
-                    lidGroep = gevondenLid.groep;
-                }
-            }
+            const ingevuldeNaam = inputVeld.value;
+            const lidGroep = hiddenGroepVeld.value;
 
             // Genereer een uniek Bestellings ID / Betalingskenmerk
-            const uniekNummer = Math.floor(1000 + Math.random() * 9000); // 4 random cijfers
+            const uniekNummer = Math.floor(1000 + Math.random() * 9000);
             const bestelId = `WAFEL-${new Date().getFullYear()}-${uniekNummer}`;
 
             // Verzamel de bestelde aantallen per product
