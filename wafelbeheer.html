@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wafelbeheer - Turnkring Jong en Vrij</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --light: #ecf0f1; --success: #2ecc71; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); }
+        header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: relative; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 0.9rem; }
+        th { background-color: var(--primary); color: white; }
+        .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-status { padding: 5px 10px; font-size: 0.8rem; border-radius: 20px; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .status-yes { background-color: var(--success); }
+        .status-no { background-color: #e74c3c; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--accent); text-align: center; }
+        .card h3 { margin: 0 0 5px 0; color: #7f8c8d; font-size: 0.85rem; }
+        .card p { margin: 0; font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        #login-screen { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #app-content { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- INLOGSCHERM -->
+    <div id="login-screen">
+        <h2>Inloggen Wafelbeheer</h2>
+        <form id="login-form">
+            <input type="email" id="login-email" placeholder="E-mail" required style="width:100%; padding:10px; margin-bottom:10px;"><br>
+            <input type="password" id="login-wachtwoord" placeholder="Wachtwoord" required style="width:100%; padding:10px; margin-bottom:15px;"><br>
+            <button type="submit" class="btn" style="width: 100%;">Inloggen</button>
+        </form>
+    </div>
+
+    <!-- MAIN APP CONTENT -->
+    <div id="app-content">
+        <header>
+            <h1>Wafelverkoop Dashboard 🧇</h1>
+            <button class="btn" id="logout-btn" style="background: #e74c3c; position: absolute; top: 15px; right: 20px;">Uitloggen</button>
+        </header>
+
+        <div class="container">
+            <!-- SNELLE KPI STATS -->
+            <div class="stats-grid">
+                <div class="card"><h3>Totaal Dozen Verkocht</h3><p id="stat-totaal-dozen">0</p></div>
+                <div class="card"><h3>Totale Omzet</h3><p id="stat-totale-omzet">€ 0,00</p></div>
+                <div class="card"><h3>Al Betaald via Bank</h3><p id="stat-totaal-betaald">€ 0,00</p></div>
+            </div>
+
+            <div style="display:flex; justify-content: space-between; align-items: center;">
+                <h2>Bestellingen Overzicht</h2>
+                <button class="btn" id="export-wafel-btn" style="background-color: #2ecc71;">📥 Download Excel Lijst (Voorzitter)</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mededeling / ID</th>
+                        <th>Koper</th>
+                        <th>Gekoppeld Lid (Verkoper)</th>
+                        <th>Bestelling Inhoud</th>
+                        <th>Te betalen</th>
+                        <th>Betaald?</th>
+                        <th>Geleverd?</th>
+                    </tr>
+                </thead>
+                <tbody id="wafel-tbody">
+                    <tr><td colspan="7">Data laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
+            authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
+            projectId: "turnkring-jong-en-vrij",
+            storageBucket: "turnkring-jong-en-vrij.firebasestorage.app",
+            messagingSenderId: "141385505787",
+            appId: "1:141385505787:web:5a82e6282025cf7be1895e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let alleBestellingen = [];
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                startWafelSync();
+            } else {
+                document.getElementById('login-screen').style.display = 'block';
+                document.getElementById('app-content').style.display = 'none';
+            }
+        });
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-wachtwoord').value)
+                .catch(err => alert("Fout: " + err.message));
+        });
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+        function startWafelSync() {
+            onSnapshot(collection(db, "wafel_bestellingen"), (snapshot) => {
+                alleBestellingen = [];
+                snapshot.forEach(doc => { alleBestellingen.push(doc.data()); });
+                renderWafelDashboard();
+            });
+        }
+
+        function renderWafelDashboard() {
+            const tbody = document.getElementById('wafel-tbody');
+            tbody.innerHTML = '';
+
+            let totaalDozen = 0;
+            let totaleOmzet = 0;
+            let totaalBetaald = 0;
+
+            alleBestellingen.forEach(b => {
+                totaleOmzet += b.totaalBedrag;
+                if(b.betaaldStatus) totaalBetaald += b.totaalBedrag;
+
+                // Tel alle dozen op
+                let inhoudHTML = "";
+                for (const [prodId, aantal] of Object.entries(b.aantallen)) {
+                    if(aantal > 0) {
+                        inhoudHTML += `${prodId}: <strong>${aantal}x</strong><br>`;
+                        totaalDozen += aantal;
+                    }
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${b.bestelId}</strong><br><small>${b.datum}</small></td>
+                        <td>${b.koperNaam}<br><small>📱 ${b.koperTel}</small></td>
+                        <td><strong>${b.gekoppeldLidNaam}</strong><br><small>(${b.gekoppeldLidGroep})</small></td>
+                        <td>${inhoudHTML}</td>
+                        <td>€ ${b.totaalBedrag.toFixed(2)}</td>
+                        <td><button class="btn-status ${b.betaaldStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="betaaldStatus">${b.betaaldStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
+                        <td><button class="btn-status ${b.afgeleverdStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="afgeleverdStatus">${b.afgeleverdStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('stat-totaal-dozen').innerText = totaalDozen;
+            document.getElementById('stat-totale-omzet').innerText = `€ ${totaleOmzet.toFixed(2)}`;
+            document.getElementById('stat-totaal-betaald').innerText = `€ ${totaalBetaald.toFixed(2)}`;
+
+            // Voeg live klik events toe aan statusknoppen
+            tbody.querySelectorAll('.btn-status').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.target.dataset.id;
+                    const veld = e.target.dataset.field;
+                    const huidigeBestelling = alleBestellingen.find(b => b.bestelId === id);
+                    const nieuweStatus = !huidigeBestelling[veld];
+                    
+                    await updateDoc(doc(db, "wafel_bestellingen", id), { [veld]: nieuweStatus });
+                });
+            });
+        }
+
+        // --- EXCEL DOWNLOAD CODE VOOR DE VOORZITTER ---
+        function exportWafelsToExcel() {
+            if(alleBestellingen.length === 0) return alert("Geen data.");
+            
+            const headers = ["Bestelnummer", "Datum", "Naam Koper", "Email Koper", "Telefoon", "Gekoppeld Lid", "Groep", "Vanille", "Choco", "Wafelmix", "Truffels", "Zeevruchten", "Marsepein", "Frangipane", "Totaal Bedrag", "Betaald", "Geleverd"];
+            let csvContent = "sep=;\n" + headers.join(";") + "\n";
+
+            alleBestellingen.forEach(b => {
+                const row = [
+                    b.bestelId, b.datum, b.koperNaam, b.koperEmail, b.koperTel, b.gekoppeldLidNaam, b.gekoppeldLidGroep,
+                    b.aantallen.vanille || 0,
+                    b.aantallen.choco_wafel || 0,
+                    b.aantallen.wafelmix || 0,
+                    b.aantallen.truffels || 0,
+                    b.aantallen.zeevruchten || 0,
+                    b.aantallen.marsepein || 0,
+                    b.aantallen.frangipane || 0,
+                    b.totaalBedrag,
+                    b.betaaldStatus ? "JA" : "NEE",
+                    b.afgeleverdStatus ? "JA" : "NEE"
+                ];
+                csvContent += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";") + "\n";
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.setAttribute("href", URL.createObjectURL(blob));
+            link.setAttribute("download", `Wafelverkoop_Overzicht_${new Date().getFullYear()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        document.getElementById('export-wafel-btn').addEventListener('click', exportWafelsToExcel);
+    </script>
+</body>
+</html>

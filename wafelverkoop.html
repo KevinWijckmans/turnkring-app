@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wafeltjesverkoop - Turnkring Jong en Vrij</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --light: #f8f9fa; --success: #2ecc71; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); color: #333; }
+        header { background-color: var(--primary); color: white; padding: 30px 15px; text-align: center; }
+        .container { max-width: 700px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; color: var(--primary); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        
+        /* Producten tabel styling */
+        .product-grid { margin-top: 20px; }
+        .product-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .product-info { flex: 2; }
+        .product-info span { display: block; font-size: 0.85rem; color: #7f8c8d; }
+        .product-qty { flex: 1; max-width: 100px; text-align: right; }
+        .product-qty input { width: 70px; text-align: center; padding: 6px; }
+
+        .total-box { background: var(--primary); color: white; padding: 15px; text-align: right; font-size: 1.3rem; font-weight: bold; border-radius: 4px; margin: 20px 0; }
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 1.1rem; font-weight: bold; width: 100%; }
+        .btn:hover { background: #d35400; }
+        
+        /* Succes scherm */
+        #success-message { display: none; background: #e8f8f5; border: 2px solid var(--success); padding: 25px; border-radius: 8px; text-align: center; }
+        .bank-details { background: white; padding: 15px; border: 1px dashed #ccc; margin: 15px 0; text-align: left; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Jaarlijkse Wafeltjesverkoop</h1>
+        <p>Turnkring Jong en Vrij Aartselaar</p>
+    </header>
+
+    <div class="container">
+        <!-- HET BESTELFORMULIER -->
+        <form id="wafel-form">
+            <h2>1. Jouw Gegevens</h2>
+            <div class="form-group">
+                <label for="koper-naam">Naam & Voornaam koper:</label>
+                <input type="text" id="koper-naam" required placeholder="Bijv. Jan Janssens">
+            </div>
+            <div class="form-group">
+                <label for="koper-email">E-mailadres (voor bevestiging):</label>
+                <input type="email" id="koper-email" required placeholder="bijv. jan@gmail.com">
+            </div>
+            <div class="form-group">
+                <label for="koper-tel">Telefoonnummer:</label>
+                <input type="tel" id="koper-tel" required placeholder="Bijv. 0412 34 56 78">
+            </div>
+
+            <h2>2. Welk lid steun je?</h2>
+            <div class="form-group">
+                <label for="steun-lid">Selecteer de turner/turnster:</label>
+                <select id="steun-lid" required>
+                    <option value="">-- Leden laden... --</option>
+                </select>
+            </div>
+
+            <h2>3. Kies je lekkers (€3,00 per stuk)</h2>
+            <div class="product-grid" id="product-lijst">
+                <!-- Wordt dynamisch opgebouwd via JS -->
+            </div>
+
+            <div class="total-box">
+                Totaal te betalen: <span id="totaal-prijs">€ 0,00</span>
+            </div>
+
+            <button type="submit" class="btn" id="submit-btn">Bestelling Plaatsen & Overschrijvingsgegevens Tonen</button>
+        </form>
+
+        <!-- SUCCES SCHERM (NA BESTELLEN) -->
+        <div id="success-message">
+            <h2 style="color: var(--success); border: none;">🎉 Bedankt voor je bestelling!</h2>
+            <p>We hebben je bestelling goed ontvangen. Om deze te bevestigen, vragen we je het totaalbedrag over te schrijven.</p>
+            
+            <div class="bank-details">
+                <strong>Te betalen bedrag:</strong> <span id="bank-bedrag" style="color: var(--accent); font-weight: bold;"></span><br>
+                <strong>Bankrekening (IBAN):</strong> BE99 1234 5678 9012<br>
+                <strong>Op naam van:</strong> Turnkring Jong en Vrij<br>
+                <strong>Mededeling (VERPLICHT!):</strong> <span id="bank-mededeling" style="background: #f1c40f; padding: 2px 6px; font-weight: bold; border-radius:3px;"></span>
+            </div>
+            <p style="font-size: 0.9rem; color: #7f8c8d;">Tip: Neem een foto of screenshot van deze gegevens. Er wordt ook handmatig gecontroleerd bij afgifte.</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
+            authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
+            projectId: "turnkring-jong-en-vrij",
+            storageBucket: "turnkring-jong-en-vrij.firebasestorage.app",
+            messagingSenderId: "141385505787",
+            appId: "1:141385505787:web:5a82e6282025cf7be1895e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Assortiment configuratie (Prijs makkelijk aanpasbaar hier)
+        const PRIJS_PER_PRODUCT = 3.00;
+        const producten = [
+            { id: "vanille", naam: "Vanillewafels" },
+            { id: "choco_wafel", naam: "Vanillewafels met Chocolade" },
+            { id: "wafelmix", naam: "Wafelmix" },
+            { id: "truffels", naam: "Chocoladetruffels" },
+            { id: "zeevruchten", naam: "Chocolade Zeevruchten" },
+            { id: "marsepein", naam: "Marsepein" },
+            { id: "frangipane", naam: "Frangipane (12 stuks)" }
+        ];
+
+        let geladenLeden = [];
+
+        // 1. Bouw de productenlijst in HTML
+        const prodContainer = document.getElementById('product-lijst');
+        producten.forEach(p => {
+            prodContainer.innerHTML += `
+                <div class="product-row">
+                    <div class="product-info">
+                        <strong>${p.naam}</strong>
+                        <span>€ ${PRIJS_PER_PRODUCT.toFixed(2)} per pak</span>
+                    </div>
+                    <div class="product-qty">
+                        <input type="number" class="wafel-input" data-id="${p.id}" value="0" min="0">
+                    </div>
+                </div>
+            `;
+        });
+
+        // 2. Haal alle leden live op voor de dropdown (Correlatie leggen!)
+        async function laadLedenDropdown() {
+            const dropdown = document.getElementById('steun-lid');
+            try {
+                const querySnapshot = await getDocs(collection(db, "leden"));
+                dropdown.innerHTML = '<option value="">-- Kies een lid --</option>';
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    geladenLeden.push({ id: doc.id, naam: data.naam, voornaam: data.voornaam, groep: data.groep });
+                });
+
+                // Sorteren op achternaam
+                geladenLeden.sort((a,b) => a.naam.localeCompare(b.naam));
+                
+                geladenLeden.forEach(lid => {
+                    dropdown.innerHTML += `<option value="${lid.id}">${lid.naam} ${lid.voornaam} (${lid.groep})</option>`;
+                });
+            } catch (e) {
+                dropdown.innerHTML = '<option value="">Fout bij laden leden...</option>';
+            }
+        }
+
+        laadLedenDropdown();
+
+        // 3. Bereken live het totaal
+        document.getElementById('product-lijst').addEventListener('input', berekenTotaal);
+
+        function berekenTotaal() {
+            let totaalAantal = 0;
+            document.querySelectorAll('.wafel-input').forEach(input => {
+                totaalAantal += parseInt(input.value) || 0;
+            });
+            const totaalPrijs = totaalAantal * PRIJS_PER_PRODUCT;
+            document.getElementById('totaal-prijs').innerText = `€ ${totaalPrijs.toFixed(2)}`;
+            return { totaalAantal, totaalPrijs };
+        }
+
+        // 4. Bestelling verwerken
+        document.getElementById('wafel-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const { totaalAantal, totaalPrijs } = berekenTotaal();
+            if(totaalAantal === 0) {
+                alert("Kies minstens 1 product om te bestellen!");
+                return;
+            }
+
+            const geselecteerdLidId = document.getElementById('steun-lid').value;
+            const gevondenLid = geladenLeden.find(l => l.id === geselecteerdLidId);
+
+            // Genereer een uniek Bestellings ID / Betalingskenmerk
+            const uniekNummer = Math.floor(1000 + Math.random() * 9000); // 4 random cijfers
+            const bestelId = `WAFEL-${new Date().getFullYear()}-${uniekNummer}`;
+
+            // Verzamel de bestelde aantallen per product
+            const besteldeAantallen = {};
+            document.querySelectorAll('.wafel-input').forEach(input => {
+                besteldeAantallen[input.dataset.id] = parseInt(input.value) || 0;
+            });
+
+            const bestellingData = {
+                bestelId: bestelId,
+                datum: new Date().toISOString().split('T')[0],
+                koperNaam: document.getElementById('koper-naam').value,
+                koperEmail: document.getElementById('koper-email').value,
+                koperTel: document.getElementById('koper-tel').value,
+                gekoppeldLidId: geselecteerdLidId,
+                gekoppeldLidNaam: `${gevondenLid.naam} ${gevondenLid.voornaam}`,
+                gekoppeldLidGroep: gevondenLid.groep,
+                aantallen: besteldeAantallen,
+                totaalBedrag: totaalPrijs,
+                betaaldStatus: false, // Wordt handmatig goedgekeurd in beheer
+                afgeleverdStatus: false
+            };
+
+            try {
+                // Opslaan in de nieuwe collectie "wafel_bestellingen"
+                await setDoc(doc(db, "wafel_bestellingen", bestelId), bestellingData);
+                
+                // Schakel over naar succes-scherm
+                document.getElementById('wafel-form').style.display = 'none';
+                document.getElementById('bank-bedrag').innerText = `€ ${totaalPrijs.toFixed(2)}`;
+                document.getElementById('bank-mededeling').innerText = bestelId;
+                document.getElementById('success-message').style.display = 'block';
+                window.scrollTo(0, 0);
+            } catch (error) {
+                alert("Er ging iets fout bij het opslaan. Probeer opnieuw. " + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
