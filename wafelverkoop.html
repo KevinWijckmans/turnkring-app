@@ -39,7 +39,6 @@
     </header>
 
     <div class="container">
-        <!-- HET BESTELFORMULIER -->
         <form id="wafel-form">
             <h2>1. Jouw Gegevens</h2>
             <div class="form-group">
@@ -56,17 +55,18 @@
             </div>
 
             <h2>2. Welk lid steun je?</h2>
-            <div class="form-group">
-                <label for="steun-lid">Selecteer de turner/turnster:</label>
-                <select id="steun-lid" required>
-                    <option value="">-- Leden laden... --</option>
-                </select>
+            <div class="form-group" style="position: relative;">
+                <label for="steun-lid-input">Typ de naam van de turner/turnster:</label>
+                <input type="text" id="steun-lid-input" autocomplete="off" placeholder="Begin te typen (bijv. Janssens)..." required>
+                
+                <div id="autocomplete-results" style="position: absolute; width: 100%; background: white; border: 1px solid #ccc; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                
+                <input type="hidden" id="steun-lid-id" value="">
             </div>
 
             <h2>3. Kies je lekkers (€3,00 per stuk)</h2>
             <div class="product-grid" id="product-lijst">
-                <!-- Wordt dynamisch opgebouwd via JS -->
-            </div>
+                </div>
 
             <div class="total-box">
                 Totaal te betalen: <span id="totaal-prijs">€ 0,00</span>
@@ -75,7 +75,6 @@
             <button type="submit" class="btn" id="submit-btn">Bestelling Plaatsen & Overschrijvingsgegevens Tonen</button>
         </form>
 
-        <!-- SUCCES SCHERM (NA BESTELLEN) -->
         <div id="success-message">
             <h2 style="color: var(--success); border: none;">🎉 Bedankt voor je bestelling!</h2>
             <p>We hebben je bestelling goed ontvangen. Om deze te bevestigen, vragen we je het totaalbedrag over te schrijven.</p>
@@ -136,32 +135,76 @@
             `;
         });
 
-        // 2. Haal alle leden live op voor de dropdown (Correlatie leggen!)
-        async function laadLedenDropdown() {
-            const dropdown = document.getElementById('steun-lid');
+        // 2. Haal alle leden achter de schermen op (veilig in het geheugen, niet openbaar op het scherm)
+        async function laadLedenData() {
             try {
                 const querySnapshot = await getDocs(collection(db, "leden"));
-                dropdown.innerHTML = '<option value="">-- Kies een lid --</option>';
-                
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     geladenLeden.push({ id: doc.id, naam: data.naam, voornaam: data.voornaam, groep: data.groep });
                 });
-
-                // Sorteren op achternaam
-                geladenLeden.sort((a,b) => a.naam.localeCompare(b.naam));
-                
-                geladenLeden.forEach(lid => {
-                    dropdown.innerHTML += `<option value="${lid.id}">${lid.naam} ${lid.voornaam} (${lid.groep})</option>`;
-                });
             } catch (e) {
-                dropdown.innerHTML = '<option value="">Fout bij laden leden...</option>';
+                console.error("Fout bij laden ledendata voor autocomplete", e);
             }
         }
+        laadLedenData();
 
-        laadLedenDropdown();
+        // 3. Autocomplete logica (Zoeken terwijl je typt - GDPR Veilig!)
+        const inputVeld = document.getElementById('steun-lid-input');
+        const resultsContainer = document.getElementById('autocomplete-results');
+        const hiddenIdVeld = document.getElementById('steun-lid-id');
 
-        // 3. Bereken live het totaal
+        inputVeld.addEventListener('input', () => {
+            const zoekTerm = inputVeld.value.toLowerCase().trim();
+            resultsContainer.innerHTML = '';
+            hiddenIdVeld.value = ''; // Reset ID bij elke aanpassing
+
+            if (zoekTerm.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            // Filter de lijst intern op basis van wat de koper typt
+            const matches = geladenLeden.filter(lid => 
+                (lid.naam && lid.naam.toLowerCase().includes(zoekTerm)) ||
+                (lid.voornaam && lid.voornaam.toLowerCase().includes(zoekTerm))
+            );
+
+            if (matches.length === 0) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            // Toon ALLEEN de matches als klikbare opties
+            matches.forEach(lid => {
+                const div = document.createElement('div');
+                div.style.padding = '10px';
+                div.style.cursor = 'pointer';
+                div.style.borderBottom = '1px solid #eee';
+                div.innerText = `${lid.naam} ${lid.voornaam} (${lid.groep})`;
+                
+                div.addEventListener('click', () => {
+                    inputVeld.value = `${lid.naam} ${lid.voornaam}`;
+                    hiddenIdVeld.value = lid.id; // Koppel het unieke database ID
+                    resultsContainer.style.display = 'none';
+                });
+
+                // Hover effectje voor de selectie
+                div.addEventListener('mouseover', () => div.style.background = '#f8f9fa');
+                div.addEventListener('mouseout', () => div.style.background = 'white');
+
+                resultsContainer.appendChild(div);
+            });
+
+            resultsContainer.style.display = 'block';
+        });
+
+        // Sluit het menuutje als je ergens anders op het scherm klikt
+        document.addEventListener('click', (e) => {
+            if (e.target !== inputVeld) resultsContainer.style.display = 'none';
+        });
+
+        // 4. Bereken live het totaal
         document.getElementById('product-lijst').addEventListener('input', berekenTotaal);
 
         function berekenTotaal() {
@@ -174,7 +217,7 @@
             return { totaalAantal, totaalPrijs };
         }
 
-        // 4. Bestelling verwerken
+        // 5. Bestelling verwerken en opslaan
         document.getElementById('wafel-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -184,8 +227,18 @@
                 return;
             }
 
-            const geselecteerdLidId = document.getElementById('steun-lid').value;
-            const gevondenLid = geladenLeden.find(l => l.id === geselecteerdLidId);
+            const geselecteerdLidId = hiddenIdVeld.value;
+            let ingevuldeNaam = inputVeld.value;
+            let lidGroep = "Onbekend/Niet gekoppeld";
+
+            // Als er een match was via de autocomplete, halen we de officiële groepsnaam op
+            if (geselecteerdLidId) {
+                const gevondenLid = geladenLeden.find(l => l.id === geselecteerdLidId);
+                if (gevondenLid) {
+                    ingevuldeNaam = `${gevondenLid.naam} ${gevondenLid.voornaam}`;
+                    lidGroep = gevondenLid.groep;
+                }
+            }
 
             // Genereer een uniek Bestellings ID / Betalingskenmerk
             const uniekNummer = Math.floor(1000 + Math.random() * 9000); // 4 random cijfers
@@ -203,12 +256,12 @@
                 koperNaam: document.getElementById('koper-naam').value,
                 koperEmail: document.getElementById('koper-email').value,
                 koperTel: document.getElementById('koper-tel').value,
-                gekoppeldLidId: geselecteerdLidId,
-                gekoppeldLidNaam: `${gevondenLid.naam} ${gevondenLid.voornaam}`,
-                gekoppeldLidGroep: gevondenLid.groep,
+                gekoppeldLidId: geselecteerdLidId || "handmatig", 
+                gekoppeldLidNaam: ingevuldeNaam,
+                gekoppeldLidGroep: lidGroep,
                 aantallen: besteldeAantallen,
                 totaalBedrag: totaalPrijs,
-                betaaldStatus: false, // Wordt handmatig goedgekeurd in beheer
+                betaaldStatus: false, 
                 afgeleverdStatus: false
             };
 
@@ -216,14 +269,14 @@
                 // Opslaan in de nieuwe collectie "wafel_bestellingen"
                 await setDoc(doc(db, "wafel_bestellingen", bestelId), bestellingData);
                 
-                // Schakel over naar succes-scherm
+                // Schakel over naar het succes-scherm met bankgegevens
                 document.getElementById('wafel-form').style.display = 'none';
                 document.getElementById('bank-bedrag').innerText = `€ ${totaalPrijs.toFixed(2)}`;
                 document.getElementById('bank-mededeling').innerText = bestelId;
                 document.getElementById('success-message').style.display = 'block';
                 window.scrollTo(0, 0);
             } catch (error) {
-                alert("Er ging iets fout bij het opslaan. Probeer opnieuw. " + error.message);
+                alert("Er ging iets fout bij het opslaan: " + error.message);
             }
         });
     </script>
