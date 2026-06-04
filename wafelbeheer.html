@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wafelbeheer - Turnkring Jong en Vrij</title>
-    <!-- Chart.js inladen voor de statistieken -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #e67e22; --light: #ecf0f1; --success: #2ecc71; }
+        :root { --primary: #2c3e50; --accent: #e67e22; --light: #ecf0f1; --success: #2ecc71; --danger: #e74c3c; }
         body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); }
         header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: relative; }
         .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -27,8 +26,12 @@
         .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-status { padding: 5px 10px; font-size: 0.8rem; border-radius: 20px; color: white; border: none; cursor: pointer; font-weight: bold; }
         .status-yes { background-color: var(--success); }
-        .status-no { background-color: #e74c3c; }
+        .status-no { background-color: var(--danger); }
         
+        /* Verwijderknop styling */
+        .btn-delete { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; border-radius: 4px; }
+        .btn-delete:hover { background-color: #fce4e4; }
+
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .card { background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--accent); text-align: center; }
         .card.money { border-left-color: var(--success); }
@@ -48,7 +51,6 @@
 </head>
 <body>
 
-    <!-- INLOGSCHERM -->
     <div id="login-screen">
         <h2>Inloggen Wafelbeheer</h2>
         <form id="login-form">
@@ -58,24 +60,20 @@
         </form>
     </div>
 
-    <!-- MAIN APP CONTENT -->
     <div id="app-content">
         <header>
             <h1>Wafelverkoop Dashboard 🧇</h1>
-            <button class="btn" id="logout-btn" style="background: #e74c3c; position: absolute; top: 15px; right: 20px;">Uitloggen</button>
+            <button class="btn" id="logout-btn" style="background: var(--danger); position: absolute; top: 15px; right: 20px;">Uitloggen</button>
         </header>
 
         <div class="container">
             
-            <!-- De Tab Knoppen -->
             <div class="tabs">
                 <button class="tab-btn active" id="btn-overzicht">📋 Bestellingen Overzicht</button>
                 <button class="tab-btn" id="btn-statistieken">📊 Statistieken & Grafieken</button>
             </div>
 
-            <!-- TAB 1: BESTELLINGEN OVERZICHT -->
             <div id="tab-overzicht" class="tab-content active">
-                <!-- SNELLE KPI STATS -->
                 <div class="stats-grid">
                     <div class="card"><h3>Totaal Dozen Verkocht</h3><p id="stat-totaal-dozen">0</p></div>
                     <div class="card money"><h3>Totale Omzet</h3><p id="stat-totale-omzet">€ 0,00</p></div>
@@ -97,32 +95,28 @@
                             <th>Te betalen</th>
                             <th>Betaald?</th>
                             <th>Geleverd?</th>
+                            <th style="text-align: center; width: 50px;">Actie</th>
                         </tr>
                     </thead>
                     <tbody id="wafel-tbody">
-                        <tr><td colspan="7">Data laden...</td></tr>
+                        <tr><td colspan="8">Data laden...</td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- TAB 2: STATISTIEKEN & GRAFIEKEN -->
             <div id="tab-statistieken" class="tab-content">
-                <!-- EXTRA KPI'S SPECIFIEK VOOR BEHEER -->
                 <div class="stats-grid">
                     <div class="card info"><h3>Aantal Bestellingen</h3><p id="stat-aantal-bestellingen">0</p></div>
                     <div class="card money"><h3>Nog te ontvangen</h3><p id="stat-nog-te-ontvangen">€ 0,00</p></div>
                     <div class="card"><h3>Gem. Bestelling Waarde</h3><p id="stat-gem-bestelling">€ 0,00</p></div>
                 </div>
 
-                <!-- GRAFIEKEN -->
                 <div class="charts-grid">
-                    <!-- Links: Top presterende groepen -->
                     <div class="chart-box">
                         <h4>Aantal verkochte pakken per turngroep</h4>
                         <canvas id="groepChart"></canvas>
                     </div>
 
-                    <!-- Rechts: Product verdeling voor de bakker -->
                     <div class="chart-box">
                         <h4>Populairste producten (Bakker-lijst)</h4>
                         <canvas id="productChart"></canvas>
@@ -135,7 +129,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -155,7 +149,6 @@
         let groepChartInstance = null;
         let productChartInstance = null;
 
-        // Vertalingen voor database ID's naar mooie namen
         const productNamen = {
             vanille: "Vanillewafels",
             choco_wafel: "Chocoladewafels",
@@ -177,7 +170,6 @@
             document.getElementById(tabId).classList.add('active');
             document.getElementById(btnId).classList.add('active');
             
-            // Als de statistieken-tab wordt geopend, herteken de grafieken (voorkomt chart rendering bugs)
             if(tabId === 'tab-statistieken') {
                 updateGrafieken();
             }
@@ -247,12 +239,15 @@
                         <td>€ ${(b.totaalBedrag || 0).toFixed(2)}</td>
                         <td><button class="btn-status ${b.betaaldStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="betaaldStatus">${b.betaaldStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
                         <td><button class="btn-status ${b.afgeleverdStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="afgeleverdStatus">${b.afgeleverdStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
+                        <td style="text-align: center;">
+                            <button class="btn-delete" data-id="${b.bestelId}" data-koper="${b.koperNaam}" title="Bestelling verwijderen">🗑️</button>
+                        </td>
                     </tr>
                 `;
             });
 
             if (alleBestellingen.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7">Nog geen bestellingen gevonden.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8">Nog geen bestellingen gevonden.</td></tr>';
             }
 
             document.getElementById('stat-totaal-dozen').innerText = totaalDozen;
@@ -268,6 +263,31 @@
                     const nieuweStatus = !huidigeBestelling[veld];
                     
                     await updateDoc(doc(db, "wafel_bestellingen", id), { [veld]: nieuweStatus });
+                });
+            });
+
+            // Live verwijderknoppen event listeners met DUBBELE VERIFICATIE
+            tbody.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const koper = e.currentTarget.dataset.koper;
+                    
+                    // Verificatie 1: Vraag of ze het zeker weten
+                    const check1 = confirm(`Weet je zeker dat je bestelling ${id} van ${koper} wilt verwijderen?`);
+                    
+                    if (check1) {
+                        // Verificatie 2: Tweede extra waarschuwing
+                        const check2 = confirm(`⚠️ OPGELET: Dit verwijdert de bestelling permanent uit de database! Dit kan niet ongedaan worden gemaakt. Doorgaan?`);
+                        
+                        if (check2) {
+                            try {
+                                await deleteDoc(doc(db, "wafel_bestellingen", id));
+                                alert(`Bestelling ${id} succesvol verwijderd.`);
+                            } catch (error) {
+                                alert("Fout bij het verwijderen: " + error.message);
+                            }
+                        }
+                    }
                 });
             });
         }
@@ -295,7 +315,7 @@
                             dataPerProduct[prodId] += aantal;
                         }
 
-                        const groep = b.gekoppeldLidGroep || "Geen groep specified";
+                        const groep = b.gekoppeldLidGroep || "Geen groep gespecificeerd";
                         if (!dataPerGroep[groep]) {
                             dataPerGroep[groep] = 0;
                         }
@@ -304,7 +324,6 @@
                 }
             });
 
-            // Extra statistieken berekeningen invullen
             const nogTeOntvangen = totaleOmzet - totaalBetaald;
             const gemBestelling = aantalBestellingen > 0 ? (totaleOmzet / aantalBestellingen) : 0;
 
