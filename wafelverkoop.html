@@ -61,7 +61,7 @@
                 <input type="text" id="steun-lid-naam" required placeholder="Bijv. Kevin Wijckmans">
             </div>
             <div class="form-group">
-                <label for="steun-lid-groep">In welke groep traint dit lid?</label>
+                <label for="lid-groep">In welke groep traint dit lid?</label>
                 <select id="lid-groep" required>
                     <option value="">-- Kies een groep --</option>
                     <option value="Kleuters">Kleuters</option>
@@ -191,7 +191,7 @@
                 koperTel: document.getElementById('koper-tel').value,
                 gekoppeldLidId: "handmatig", 
                 gekoppeldLidNaam: document.getElementById('steun-lid-naam').value,
-                gekoppeldLidGroep: document.getElementById('steun-lid-groep').value,
+                gekoppeldLidGroep: document.getElementById('lid-groep').value, // HIER GEANPASST NAAR 'lid-groep'
                 aantallen: besteldeAantallen,
                 totaalBedrag: totaalPrijs,
                 betaaldStatus: false, 
