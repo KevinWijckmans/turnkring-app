@@ -4,22 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wafelbeheer - Turnkring Jong en Vrij</title>
+    <!-- Chart.js inladen voor de statistieken -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #e67e22; --light: #ecf0f1; --success: #2ecc71; }
         body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); }
         header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: relative; }
         .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Tab Systeem Styling */
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; gap: 10px; }
+        .tab-btn { padding: 12px 24px; border: none; background: none; font-size: 1rem; font-weight: bold; cursor: pointer; color: #7f8c8d; border-top-left-radius: 4px; border-top-right-radius: 4px; }
+        .tab-btn:hover { background-color: #eee; }
+        .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background-color: #fff; margin-bottom: -2px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 0.9rem; }
         th { background-color: var(--primary); color: white; }
+        
         .btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-status { padding: 5px 10px; font-size: 0.8rem; border-radius: 20px; color: white; border: none; cursor: pointer; font-weight: bold; }
         .status-yes { background-color: var(--success); }
         .status-no { background-color: #e74c3c; }
+        
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .card { background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--accent); text-align: center; }
+        .card.money { border-left-color: var(--success); }
+        .card.info { border-left-color: var(--primary); }
         .card h3 { margin: 0 0 5px 0; color: #7f8c8d; font-size: 0.85rem; }
         .card p { margin: 0; font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        
+        /* Grafieken Grid Layout */
+        .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px; }
+        @media(max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+        .chart-box { background: #fff; border: 1px solid #e1e4e8; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .chart-box h4 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; color: var(--primary); }
+
         #login-screen { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         #app-content { display: none; }
     </style>
@@ -44,34 +66,70 @@
         </header>
 
         <div class="container">
-            <!-- SNELLE KPI STATS -->
-            <div class="stats-grid">
-                <div class="card"><h3>Totaal Dozen Verkocht</h3><p id="stat-totaal-dozen">0</p></div>
-                <div class="card"><h3>Totale Omzet</h3><p id="stat-totale-omzet">€ 0,00</p></div>
-                <div class="card"><h3>Al Betaald via Bank</h3><p id="stat-totaal-betaald">€ 0,00</p></div>
+            
+            <!-- De Tab Knoppen -->
+            <div class="tabs">
+                <button class="tab-btn active" id="btn-overzicht">📋 Bestellingen Overzicht</button>
+                <button class="tab-btn" id="btn-statistieken">📊 Statistieken & Grafieken</button>
             </div>
 
-            <div style="display:flex; justify-content: space-between; align-items: center;">
-                <h2>Bestellingen Overzicht</h2>
-                <button class="btn" id="export-wafel-btn" style="background-color: #2ecc71;">📥 Download Excel Lijst (Voorzitter)</button>
+            <!-- TAB 1: BESTELLINGEN OVERZICHT -->
+            <div id="tab-overzicht" class="tab-content active">
+                <!-- SNELLE KPI STATS -->
+                <div class="stats-grid">
+                    <div class="card"><h3>Totaal Dozen Verkocht</h3><p id="stat-totaal-dozen">0</p></div>
+                    <div class="card money"><h3>Totale Omzet</h3><p id="stat-totale-omzet">€ 0,00</p></div>
+                    <div class="card success"><h3>Al Betaald via Bank</h3><p id="stat-totaal-betaald">€ 0,00</p></div>
+                </div>
+
+                <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 25px;">
+                    <h2>Bestellingen Lijst</h2>
+                    <button class="btn" id="export-wafel-btn" style="background-color: #2ecc71;">📥 Download Excel Lijst (Voorzitter)</button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mededeling / ID</th>
+                            <th>Koper</th>
+                            <th>Gekoppeld Lid (Verkoper)</th>
+                            <th>Bestelling Inhoud</th>
+                            <th>Te betalen</th>
+                            <th>Betaald?</th>
+                            <th>Geleverd?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wafel-tbody">
+                        <tr><td colspan="7">Data laden...</td></tr>
+                    </tbody>
+                </table>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Mededeling / ID</th>
-                        <th>Koper</th>
-                        <th>Gekoppeld Lid (Verkoper)</th>
-                        <th>Bestelling Inhoud</th>
-                        <th>Te betalen</th>
-                        <th>Betaald?</th>
-                        <th>Geleverd?</th>
-                    </tr>
-                </thead>
-                <tbody id="wafel-tbody">
-                    <tr><td colspan="7">Data laden...</td></tr>
-                </tbody>
-            </table>
+            <!-- TAB 2: STATISTIEKEN & GRAFIEKEN -->
+            <div id="tab-statistieken" class="tab-content">
+                <!-- EXTRA KPI'S SPECIFIEK VOOR BEHEER -->
+                <div class="stats-grid">
+                    <div class="card info"><h3>Aantal Bestellingen</h3><p id="stat-aantal-bestellingen">0</p></div>
+                    <div class="card money"><h3>Nog te ontvangen</h3><p id="stat-nog-te-ontvangen">€ 0,00</p></div>
+                    <div class="card"><h3>Gem. Bestelling Waarde</h3><p id="stat-gem-bestelling">€ 0,00</p></div>
+                </div>
+
+                <!-- GRAFIEKEN -->
+                <div class="charts-grid">
+                    <!-- Links: Top presterende groepen -->
+                    <div class="chart-box">
+                        <h4>Aantal verkochte pakken per turngroep</h4>
+                        <canvas id="groepChart"></canvas>
+                    </div>
+
+                    <!-- Rechts: Product verdeling voor de bakker -->
+                    <div class="chart-box">
+                        <h4>Populairste producten (Bakker-lijst)</h4>
+                        <canvas id="productChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -94,7 +152,38 @@
         const auth = getAuth(app);
 
         let alleBestellingen = [];
+        let groepChartInstance = null;
+        let productChartInstance = null;
 
+        // Vertalingen voor database ID's naar mooie namen
+        const productNamen = {
+            vanille: "Vanillewafels",
+            choco_wafel: "Chocoladewafels",
+            wafelmix: "Wafelmix",
+            truffels: "Truffels",
+            zeevruchten: "Zeevruchten",
+            marsepein: "Marsepein",
+            frangipane: "Frangipane"
+        };
+
+        // --- TAB SWITCH LOGICA ---
+        document.getElementById('btn-overzicht').addEventListener('click', () => switchTab('tab-overzicht', 'btn-overzicht'));
+        document.getElementById('btn-statistieken').addEventListener('click', () => switchTab('tab-statistieken', 'btn-statistieken'));
+
+        function switchTab(tabId, btnId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById(btnId).classList.add('active');
+            
+            // Als de statistieken-tab wordt geopend, herteken de grafieken (voorkomt chart rendering bugs)
+            if(tabId === 'tab-statistieken') {
+                updateGrafieken();
+            }
+        }
+
+        // --- AUTHENTICATIE SYSTEEM ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('login-screen').style.display = 'none';
@@ -113,14 +202,19 @@
         });
         document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
+        // --- REALTIME FIRESTORE DATA SYNC ---
         function startWafelSync() {
             onSnapshot(collection(db, "wafel_bestellingen"), (snapshot) => {
                 alleBestellingen = [];
                 snapshot.forEach(doc => { alleBestellingen.push(doc.data()); });
                 renderWafelDashboard();
+                if (document.getElementById('tab-statistieken').classList.contains('active')) {
+                    updateGrafieken();
+                }
             });
         }
 
+        // --- HOOFD DASHBOARD RENDERING (TAB 1) ---
         function renderWafelDashboard() {
             const tbody = document.getElementById('wafel-tbody');
             tbody.innerHTML = '';
@@ -130,15 +224,17 @@
             let totaalBetaald = 0;
 
             alleBestellingen.forEach(b => {
-                totaleOmzet += b.totaalBedrag;
-                if(b.betaaldStatus) totaalBetaald += b.totaalBedrag;
+                totaleOmzet += b.totaalBedrag || 0;
+                if(b.betaaldStatus) totaalBetaald += b.totaalBedrag || 0;
 
-                // Tel alle dozen op
                 let inhoudHTML = "";
-                for (const [prodId, aantal] of Object.entries(b.aantallen)) {
-                    if(aantal > 0) {
-                        inhoudHTML += `${prodId}: <strong>${aantal}x</strong><br>`;
-                        totaalDozen += aantal;
+                if(b.aantallen) {
+                    for (const [prodId, aantal] of Object.entries(b.aantallen)) {
+                        if(aantal > 0) {
+                            const naam = productNamen[prodId] || prodId;
+                            inhoudHTML += `${naam}: <strong>${aantal}x</strong><br>`;
+                            totaalDozen += aantal;
+                        }
                     }
                 }
 
@@ -146,24 +242,28 @@
                     <tr>
                         <td><strong>${b.bestelId}</strong><br><small>${b.datum}</small></td>
                         <td>${b.koperNaam}<br><small>📱 ${b.koperTel}</small></td>
-                        <td><strong>${b.gekoppeldLidNaam}</strong><br><small>(${b.gekoppeldLidGroep})</small></td>
+                        <td><strong>${b.gekoppeldLidNaam}</strong><br><small>(${b.gekoppeldLidGroep || 'Geen groep'})</small></td>
                         <td>${inhoudHTML}</td>
-                        <td>€ ${b.totaalBedrag.toFixed(2)}</td>
+                        <td>€ ${(b.totaalBedrag || 0).toFixed(2)}</td>
                         <td><button class="btn-status ${b.betaaldStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="betaaldStatus">${b.betaaldStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
                         <td><button class="btn-status ${b.afgeleverdStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="afgeleverdStatus">${b.afgeleverdStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
                     </tr>
                 `;
             });
 
+            if (alleBestellingen.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">Nog geen bestellingen gevonden.</td></tr>';
+            }
+
             document.getElementById('stat-totaal-dozen').innerText = totaalDozen;
             document.getElementById('stat-totale-omzet').innerText = `€ ${totaleOmzet.toFixed(2)}`;
             document.getElementById('stat-totaal-betaald').innerText = `€ ${totaalBetaald.toFixed(2)}`;
 
-            // Voeg live klik events toe aan statusknoppen
+            // Live statusknoppen event listeners
             tbody.querySelectorAll('.btn-status').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const id = e.target.dataset.id;
-                    const veld = e.target.dataset.field;
+                    const id = e.currentTarget.dataset.id;
+                    const veld = e.currentTarget.dataset.field;
                     const huidigeBestelling = alleBestellingen.find(b => b.bestelId === id);
                     const nieuweStatus = !huidigeBestelling[veld];
                     
@@ -172,9 +272,95 @@
             });
         }
 
+        // --- STATISTIEKEN BEREKENEN & GRAFIEKEN UPDATEN (TAB 2) ---
+        function updateGrafieken() {
+            let totaalPakken = 0;
+            let totaleOmzet = 0;
+            let totaalBetaald = 0;
+            let aantalBestellingen = alleBestellingen.length;
+
+            const dataPerGroep = {};
+            const dataPerProduct = { vanille: 0, choco_wafel: 0, wafelmix: 0, truffels: 0, zeevruchten: 0, marsepein: 0, frangipane: 0 };
+
+            alleBestellingen.forEach(b => {
+                totaleOmzet += b.totaalBedrag || 0;
+                if(b.betaaldStatus) totaalBetaald += b.totaalBedrag || 0;
+
+                if (b.aantallen) {
+                    Object.keys(b.aantallen).forEach(prodId => {
+                        const aantal = b.aantallen[prodId] || 0;
+                        totaalPakken += aantal;
+
+                        if (dataPerProduct[prodId] !== undefined) {
+                            dataPerProduct[prodId] += aantal;
+                        }
+
+                        const groep = b.gekoppeldLidGroep || "Geen groep specified";
+                        if (!dataPerGroep[groep]) {
+                            dataPerGroep[groep] = 0;
+                        }
+                        dataPerGroep[groep] += aantal;
+                    });
+                }
+            });
+
+            // Extra statistieken berekeningen invullen
+            const nogTeOntvangen = totaleOmzet - totaalBetaald;
+            const gemBestelling = aantalBestellingen > 0 ? (totaleOmzet / aantalBestellingen) : 0;
+
+            document.getElementById('stat-aantal-bestellingen').innerText = aantalBestellingen;
+            document.getElementById('stat-nog-te-ontvangen').innerText = `€ ${nogTeOntvangen.toFixed(2)}`;
+            document.getElementById('stat-gem-bestelling').innerText = `€ ${gemBestelling.toFixed(2)}`;
+
+            // Grafiek 1: Staafdiagram per Groep
+            const groepLabels = Object.keys(dataPerGroep);
+            const groepAantallen = Object.values(dataPerGroep);
+
+            if(groepChartInstance) groepChartInstance.destroy();
+            const ctxGroep = document.getElementById('groepChart').getContext('2d');
+            groepChartInstance = new Chart(ctxGroep, {
+                type: 'bar',
+                data: {
+                    labels: groepLabels,
+                    datasets: [{
+                        label: 'Aantal pakken verkocht',
+                        data: groepAantallen,
+                        backgroundColor: '#e67e22',
+                        borderColor: '#d35400',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            // Grafiek 2: Donutdiagram per Product
+            const productLabels = Object.keys(dataPerProduct).map(id => productNamen[id] || id);
+            const productAantallen = Object.values(dataPerProduct);
+
+            if(productChartInstance) productChartInstance.destroy();
+            const ctxProduct = document.getElementById('productChart').getContext('2d');
+            productChartInstance = new Chart(ctxProduct, {
+                type: 'doughnut',
+                data: {
+                    labels: productLabels,
+                    datasets: [{
+                        data: productAantallen,
+                        backgroundColor: ['#f1c40f', '#34495e', '#e67e22', '#7f8c8d', '#9b59b6', '#e74c3c', '#2ecc71']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+
         // --- EXCEL DOWNLOAD CODE VOOR DE VOORZITTER ---
         function exportWafelsToExcel() {
-            if(alleBestellingen.length === 0) return alert("Geen data.");
+            if(alleBestellingen.length === 0) return alert("Geen data om te exporteren.");
             
             const headers = ["Bestelnummer", "Datum", "Naam Koper", "Email Koper", "Telefoon", "Gekoppeld Lid", "Groep", "Vanille", "Choco", "Wafelmix", "Truffels", "Zeevruchten", "Marsepein", "Frangipane", "Totaal Bedrag", "Betaald", "Geleverd"];
             let csvContent = "sep=;\n" + headers.join(";") + "\n";
@@ -182,13 +368,13 @@
             alleBestellingen.forEach(b => {
                 const row = [
                     b.bestelId, b.datum, b.koperNaam, b.koperEmail, b.koperTel, b.gekoppeldLidNaam, b.gekoppeldLidGroep,
-                    b.aantallen.vanille || 0,
-                    b.aantallen.choco_wafel || 0,
-                    b.aantallen.wafelmix || 0,
-                    b.aantallen.truffels || 0,
-                    b.aantallen.zeevruchten || 0,
-                    b.aantallen.marsepein || 0,
-                    b.aantallen.frangipane || 0,
+                    b.aantallen?.vanille || 0,
+                    b.aantallen?.choco_wafel || 0,
+                    b.aantallen?.wafelmix || 0,
+                    b.aantallen?.truffels || 0,
+                    b.aantallen?.zeevruchten || 0,
+                    b.aantallen?.marsepein || 0,
+                    b.aantallen?.frangipane || 0,
                     b.totaalBedrag,
                     b.betaaldStatus ? "JA" : "NEE",
                     b.afgeleverdStatus ? "JA" : "NEE"
