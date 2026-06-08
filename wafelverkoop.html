@@ -199,15 +199,24 @@
             };
 
             try {
+                // 1. Opslaan in Firebase
                 await setDoc(doc(db, "wafel_bestellingen", bestelId), bestellingData);
                 
+                // 2. Bevestigingsmail triggeren via Netlify Function & Resend
+                await fetch("/.netlify/functions/stuur-bevestiging", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(bestellingData)
+                });
+                
+                // 3. Scherm omwisselen naar succesmelding
                 document.getElementById('wafel-form').style.display = 'none';
                 document.getElementById('bank-bedrag').innerText = `€ ${totaalPrijs.toFixed(2)}`;
                 document.getElementById('bank-mededeling').innerText = bestelId;
                 document.getElementById('success-message').style.display = 'block';
                 window.scrollTo(0, 0);
             } catch (error) {
-                alert("Er ging iets fout bij het opslaan: " + error.message);
+                alert("Er ging iets fout bij het verwerken van je bestelling: " + error.message);
             }
         });
     </script>
