@@ -18,6 +18,15 @@
         .hidden-pot { display: none !important; }
         .checkbox-group { display: flex; align-items: flex-start; margin-top: 12px; }
         .checkbox-group label { margin: 0; font-weight: normal; cursor: pointer; }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .form-card { margin: 10px 8px; padding: 18px; }
+            h2 { font-size: 1.4rem; }
+            input, select { font-size: 0.95rem; }
+            button { font-size: 0.95rem; padding: 11px; }
+            .checkbox-group { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
     </style>
 </head>
 <body>
