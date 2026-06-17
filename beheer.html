@@ -663,5 +663,16 @@
             if(sectionId === 'stats') loadAanwezigheidsStats();
         }
     </script>
+        <!-- PWA Registratie Script -->
+    <link rel="manifest" href="/turnkring-app/manifest.json">
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/turnkring-app/sw.js')
+            .then(reg => console.log('Service Worker geregistreerd!', reg))
+            .catch(err => console.log('Service Worker registratie mislukt', err));
+        });
+    }
+    </script>
 </body>
 </html>
