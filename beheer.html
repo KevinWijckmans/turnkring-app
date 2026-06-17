@@ -395,10 +395,24 @@
                 });
             });
 
+            // Afhandeling verwijder-knoppen met foutmelding voor trainers
             tbody.querySelectorAll('button[data-delete]').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
+                    const lidId = e.target.dataset.delete;
+                    
                     if(confirm("Lid permanent verwijderen?")) {
-                        await deleteDoc(doc(db, "leden", e.target.dataset.delete));
+                        try {
+                            // Firebase probeert het te verwijderen
+                            await deleteDoc(doc(db, "leden", lidId));
+                            
+                            // Optioneel: als je geen real-time listener gebruikt (onSnapshot), 
+                            // kun je hier renderLeden() nog eens aanroepen om de rij direct te verbergen.
+                            
+                        } catch (error) {
+                            console.error("Verwijderen mislukt:", error);
+                            // Als de Security Rules het blokkeren (Missing or insufficient permissions)
+                            alert("Fout: Je hebt geen rechten om leden te verwijderen!");
+                        }
                     }
                 });
             });
