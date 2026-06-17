@@ -41,11 +41,38 @@
         .chart-container { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
         
         .matrix-container { overflow-x: auto; margin-top: 15px; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .table-responsive { overflow-x: auto; }
+        .responsive-table { width: 100%; min-width: 760px; }
         .td-check { text-align: center; font-size: 1.1rem; }
         .badge-pct { background: #34495e; color: white; padding: 3px 8px; border-radius: 10px; font-weight: bold; font-size: 0.85rem; }
 
         #login-screen { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
+
+        @media (max-width: 1000px) {
+            nav { flex-wrap: wrap; }
+            nav button { flex: 1 1 45%; min-width: 140px; padding: 12px 10px; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-bar .filter-group { min-width: auto; flex: 1 1 100%; }
+            .filter-bar .filter-group:nth-last-child(1) { align-self: flex-start; }
+            .chart-container { min-height: 250px; }
+        }
+
+        @media (max-width: 760px) {
+            .container { margin: 10px; padding: 16px; }
+            .filter-bar { gap: 10px; padding: 12px; }
+            .filter-bar label { font-size: 0.8rem; }
+            .btn, .btn-status { width: 100%; }
+            .presence-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .table-responsive { overflow-x: auto; }
+            .responsive-table { min-width: 100%; }
+            .responsive-table thead { display: none; }
+            .responsive-table tr { display: block; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 12px; }
+            .responsive-table td { display: block; text-align: right; padding: 10px 10px 10px 50%; position: relative; border: none; }
+            .responsive-table td:before { content: attr(data-label); position: absolute; left: 12px; top: 10px; width: 40%; text-align: left; font-weight: 700; color: #34495e; }
+            .responsive-table td:last-child { padding-bottom: 16px; }
+            .matrix-container { padding: 10px; }
+        }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         #app-content { display: none; }
@@ -225,22 +252,24 @@
                     </div>
                 </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Naam & Voornaam</th>
-                            <th>Groep</th>
-                            <th>Geboortedatum</th>
-                            <th>Contact</th>
-                            <th>Toestemmingen</th>
-                            <th>Lidgeld</th>
-                            <th>Actie</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leden-lijst-body">
-                        <tr><td colspan="7">Leden laden...</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Naam & Voornaam</th>
+                                <th>Groep</th>
+                                <th>Geboortedatum</th>
+                                <th>Contact</th>
+                                <th>Toestemmingen</th>
+                                <th>Lidgeld</th>
+                                <th>Actie</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leden-lijst-body">
+                            <tr><td colspan="7">Leden laden...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </div>
@@ -346,13 +375,13 @@
 
                 tbody.innerHTML += `
                     <tr>
-                        <td><strong>${lid.naam}</strong> ${lid.voornaam}</td>
-                        <td>${lid.groep}</td>
-                        <td>${lid.geboortedatum}</td>
-                        <td>📧 ${lid.email1}<br>📞 ${lid.tel1}</td>
-                        <td>📸 Foto's: ${magOpFoto ? '✅' : '❌'}<br>📧 Mail: ${lid.marketing ? '✅' : '❌'}</td>
-                        <td><button class="btn-status ${betaaldStatus ? 'status-paid' : 'status-unpaid'}" data-id="${lid.id}" data-status="${betaaldStatus}">${betaaldStatus ? 'Betaald ✅' : 'Niet betaald ❌'}</button></td>
-                        <td><button class="btn" style="background:#e74c3c; padding: 5px 10px;" data-delete="${lid.id}">X</button></td>
+                        <td data-label="Naam & Voornaam"><strong>${lid.naam}</strong> ${lid.voornaam}</td>
+                        <td data-label="Groep">${lid.groep}</td>
+                        <td data-label="Geboortedatum">${lid.geboortedatum}</td>
+                        <td data-label="Contact">📧 ${lid.email1}<br>📞 ${lid.tel1}</td>
+                        <td data-label="Toestemmingen">📸 Foto's: ${magOpFoto ? '✅' : '❌'}<br>📧 Mail: ${lid.marketing ? '✅' : '❌'}</td>
+                        <td data-label="Lidgeld"><button class="btn-status ${betaaldStatus ? 'status-paid' : 'status-unpaid'}" data-id="${lid.id}" data-status="${betaaldStatus}">${betaaldStatus ? 'Betaald ✅' : 'Niet betaald ❌'}</button></td>
+                        <td data-label="Actie"><button class="btn" style="background:#e74c3c; padding: 5px 10px;" data-delete="${lid.id}">X</button></td>
                     </tr>
                 `;
             });
