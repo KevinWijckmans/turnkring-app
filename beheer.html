@@ -77,77 +77,15 @@
         </header>
 
         <nav>
-            <button onclick="showSection('leden')" id="btn-leden" class="active">Ledenlijst (Live)</button>
-            <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid">Aanwezigheden</button>
+            <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid" class="active">Aanwezigheden</button>
             <button onclick="showSection('stats')" id="btn-stats">Statistieken & Rapporten 📊</button>
+            <button onclick="showSection('leden')" id="btn-leden">Ledenlijst (Live)</button>
         </nav>
 
         <div class="container">
             
-            <!-- SECTIE 1: LEDEN -->
-            <div id="section-leden" class="section active">
-                <h2>Geregistreerde Leden via website</h2>
-                
-                <!-- FILTER BALK + EXPORT KNOP -->
-                <div class="filter-bar">
-                    <div class="filter-group" style="flex: 2;">
-                        <label for="search-leden">Zoek op naam, e-mail of telefoon:</label>
-                        <input type="text" id="search-leden" placeholder="Typ om te zoeken...">
-                    </div>
-                    <div class="filter-group">
-                        <label for="filter-leden-groep">Filter op Groep:</label>
-                        <select id="filter-leden-groep">
-                            <option value="alle">-- Alle groepen --</option>
-                            <option value="Kleuters">Kleuters</option>
-                            <option value="Meisjes 1">Meisjes 1</option>
-                            <option value="Meisjes 2">Meisjes 2</option>
-                            <option value="Jongens">Jongens</option>
-                            <option value="Juffers 1">Juffers 1</option>
-                            <option value="Juffers 2">Juffers 2</option>
-                            <option value="Knapen">Knapen</option>
-                            <option value="Turnsters en turners">Turnsters en turners</option>
-                            <option value="Skippies">Skippies</option>
-                            <option value="Jumpers">Jumpers</option>
-                            <option value="Demo Team">Demo Team</option>
-                            <option value="Dance Adults">Dance Adults</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="filter-leden-lidgeld">Filter op Lidgeld:</label>
-                        <select id="filter-leden-lidgeld">
-                            <option value="alle">-- Iedereen --</option>
-                            <option value="betaald">Alleen Betaald ✅</option>
-                            <option value="onbetaald">Alleen Niet betaald ❌</option>
-                        </select>
-                    </div>
-                    <!-- DE EXPORT KNOP -->
-                    <div class="filter-group" style="min-width: auto; flex: 0;">
-                        <button class="btn" id="export-excel-btn" style="background-color: #2ecc71; height: 38px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            📥 Excel Export
-                        </button>
-                    </div>
-                </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Naam & Voornaam</th>
-                            <th>Groep</th>
-                            <th>Geboortedatum</th>
-                            <th>Contact</th>
-                            <th>Toestemmingen</th>
-                            <th>Lidgeld</th>
-                            <th>Actie</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leden-lijst-body">
-                        <tr><td colspan="7">Leden laden...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- SECTIE 2: AANWEZIGHEDEN -->
-            <div id="section-aanwezigheid" class="section">
+            <!-- SECTIE 1: AANWEZIGHEDEN -->
+            <div id="section-aanwezigheid" class="section active">
                 <h2>Aanwezigheden Registreren</h2>
                 <div class="flex-row">
                     <div style="flex: 1; min-width: 200px;">
@@ -177,7 +115,7 @@
                 <button class="btn" id="save-presence-btn">Aanwezigheden Opslaan</button>
             </div>
 
-            <!-- SECTIE 3: STATISTIEKEN & RAPPORTEN -->
+            <!-- SECTIE 2: STATISTIEKEN & RAPPORTEN -->
             <div id="section-stats" class="section">
                 <h2>Club Statistieken & Inzichten</h2>
                 
@@ -241,6 +179,68 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- SECTIE 3: LEDEN -->
+            <div id="section-leden" class="section">
+                <h2>Geregistreerde Leden via website</h2>
+                
+                <!-- FILTER BALK + EXPORT KNOP -->
+                <div class="filter-bar">
+                    <div class="filter-group" style="flex: 2;">
+                        <label for="search-leden">Zoek op naam, e-mail of telefoon:</label>
+                        <input type="text" id="search-leden" placeholder="Typ om te zoeken...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-leden-groep">Filter op Groep:</label>
+                        <select id="filter-leden-groep">
+                            <option value="alle">-- Alle groepen --</option>
+                            <option value="Kleuters">Kleuters</option>
+                            <option value="Meisjes 1">Meisjes 1</option>
+                            <option value="Meisjes 2">Meisjes 2</option>
+                            <option value="Jongens">Jongens</option>
+                            <option value="Juffers 1">Juffers 1</option>
+                            <option value="Juffers 2">Juffers 2</option>
+                            <option value="Knapen">Knapen</option>
+                            <option value="Turnsters en turners">Turnsters en turners</option>
+                            <option value="Skippies">Skippies</option>
+                            <option value="Jumpers">Jumpers</option>
+                            <option value="Demo Team">Demo Team</option>
+                            <option value="Dance Adults">Dance Adults</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-leden-lidgeld">Filter op Lidgeld:</label>
+                        <select id="filter-leden-lidgeld">
+                            <option value="alle">-- Iedereen --</option>
+                            <option value="betaald">Alleen Betaald ✅</option>
+                            <option value="onbetaald">Alleen Niet betaald ❌</option>
+                        </select>
+                    </div>
+                    <!-- DE EXPORT KNOP -->
+                    <div class="filter-group" style="min-width: auto; flex: 0;">
+                        <button class="btn" id="export-excel-btn" style="background-color: #2ecc71; height: 38px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                            📥 Excel Export
+                        </button>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Naam & Voornaam</th>
+                            <th>Groep</th>
+                            <th>Geboortedatum</th>
+                            <th>Contact</th>
+                            <th>Toestemmingen</th>
+                            <th>Lidgeld</th>
+                            <th>Actie</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leden-lijst-body">
+                        <tr><td colspan="7">Leden laden...</td></tr>
+                    </tbody>
+                </table>
             </div>
 
         </div>
