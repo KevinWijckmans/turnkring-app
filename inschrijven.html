@@ -35,7 +35,6 @@
         <h2>Inschrijvingsformulier Jong & Vrij</h2>
         <form id="inschrijf-form">
             
-            <!-- Honeypot anti-bot veld -->
             <div class="form-group hidden-pot">
                 <label>Laat dit veld leeg (anti-spam):</label>
                 <input type="text" id="robot-check" autocomplete="off">
@@ -104,7 +103,6 @@
                 <input type="email" id="lid-email2">
             </div>
             
-            <!-- Privacy & Marketing -->
             <div class="checkbox-group">
                 <input type="checkbox" id="lid-fotos">
                 <label for="lid-fotos">Ik geef toestemming dat er <strong>foto's/video's</strong> van het lid gemaakt en gepubliceerd mogen worden op de website of sociale media van Jong & Vrij.</label>
@@ -154,7 +152,8 @@
             btn.innerText = "Verzenden...";
 
             try {
-                await addDoc(collection(db, "leden"), {
+                // 1. Verzamel de liddata in een object zodat we dit ook naar de mailer kunnen sturen
+                const lidData = {
                     voornaam: voornaam,
                     naam: naam,
                     geboortedatum: document.getElementById('lid-geboortedatum').value,
@@ -170,13 +169,35 @@
                     marketing: document.getElementById('lid-marketing').checked,
                     lidgeldBetaald: false, // Standaard staat dit bij inschrijving op FALSE
                     inschrijfDatum: new Date().toISOString()
-                });
+                };
 
-                alert("Inschrijving succesvol ontvangen! Welkom bij Jong en Vrij.");
+                // 2. Opslaan in Firebase Firestore (Dit werkt altijd, ook vanaf GitHub Pages)
+                await addDoc(collection(db, "leden"), lidData);
+
+                // 3. Bevestigingsmail triggeren via Netlify & Resend
+                // =========================================================================
+                // OPMERKING VOOR OPTIE 2 (Formulier staat op GitHub, Mailer staat op Netlify):
+                // Omdat deze pagina op GitHub Pages draait, moeten we het VOLLEDIGE adres
+                // van je Netlify-site invullen om de functie te kunnen bereiken.
+                //
+                // PAS HIERONDER 'turnkring-jong-en-vrij' AAN NAAR JE ECHTE NETLIFY SUBDOMEIN!
+                // =========================================================================
+                await fetch("https://www.jongenvrij.be", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(lidData)
+                });
+                // =========================================================================
+                // TIP VOOR LATER: Mocht je deze HTML-pagina ooit verhuizen NAAR Netlify,
+                // dan mag je de URL hierboven weer korter maken en veranderen in:
+                // "/.netlify/functions/stuur-inschrijving"
+                // =========================================================================
+
+                alert("Inschrijving succesvol ontvangen! Er is een bevestigingsmail onderweg. Welkom bij Jong en Vrij.");
                 document.getElementById('inschrijf-form').reset();
             } catch (error) {
-                console.error("Fout bij opslaan: ", error);
-                alert("Er ging iets mis. Probeer het later opnieuw.");
+                console.error("Fout bij opslaan of mailen: ", error);
+                alert("Er ging iets mis bij het verwerken van de inschrijving. Probeer het later opnieuw.");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Inschrijven";
