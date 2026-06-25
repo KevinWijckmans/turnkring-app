@@ -137,6 +137,15 @@
                         <label>Datum Les:</label>
                         <input type="date" id="les-datum">
                     </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label>Sorteer op:</label>
+                        <select id="attendance-sort">
+                            <option value="voornaam-asc">Alfabetisch A-Z</option>
+                            <option value="voornaam-desc">Alfabetisch Z-A</option>
+                            <option value="inschrijf-laatste">Laatste ingeschreven</option>
+                            <option value="inschrijf-eerste">Eerste ingeschreven</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="aanwezigheids-lijst"></div>
                 <br>
@@ -245,6 +254,17 @@
                             <option value="onbetaald"> Niet betaald ❌</option>
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label for="sort-leden">Sorteer op:</label>
+                        <select id="sort-leden">
+                            <option value="voornaam-asc">Voornaam A-Z</option>
+                            <option value="voornaam-desc">Voornaam Z-A</option>
+                            <option value="inschrijf-laatste">Laatste ingeschreven</option>
+                            <option value="inschrijf-eerste">Eerste ingeschreven</option>
+                            <option value="betaald-eerst">Betaald eerst</option>
+                            <option value="onbetaald-eerst">Niet betaald eerst</option>
+                        </select>
+                    </div>
                     <!-- DE EXPORT KNOP -->
                     <div class="filter-group" style="min-width: auto; flex: 0;">
                         <button class="btn" id="export-excel-btn" style="background-color: #2ecc71; height: 38px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
@@ -340,16 +360,18 @@
             const gekozenLidgeld = document.getElementById('filter-leden-lidgeld').value;
 
             return alleLeden.filter(lid => {
-                const matchZoek = !zoekTerm || 
+                const matchZoek = !zoekTerm ||
                     (lid.naam && lid.naam.toLowerCase().includes(zoekTerm)) ||
                     (lid.voornaam && lid.voornaam.toLowerCase().includes(zoekTerm)) ||
                     (lid.email1 && lid.email1.toLowerCase().includes(zoekTerm)) ||
-                    (lid.tel1 && lid.tel1.includes(zoekTerm));
+                    (lid.email2 && lid.email2.toLowerCase().includes(zoekTerm)) ||
+                    (lid.tel1 && lid.tel1.includes(zoekTerm)) ||
+                    (lid.tel2 && lid.tel2.includes(zoekTerm));
 
                 const matchGroep = gekozenGroep === 'alle' || lid.groep === gekozenGroep;
 
                 const betaaldStatus = lid.lidgeldBetaald || false;
-                const matchLidgeld = gekozenLidgeld === 'alle' || 
+                const matchLidgeld = gekozenLidgeld === 'alle' ||
                     (gekozenLidgeld === 'betaald' && betaaldStatus === true) ||
                     (gekozenLidgeld === 'onbetaald' && betaaldStatus === false);
 
@@ -357,13 +379,49 @@
             });
         }
 
+        function getSortOption() {
+            return document.getElementById('sort-leden')?.value || 'voornaam-asc';
+        }
+
+        function compareStrings(a, b) {
+            return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+        }
+
+        function sortLedenArray(leden, sortOption) {
+            const sorted = [...leden];
+            switch (sortOption) {
+                case 'voornaam-desc':
+                    return sorted.sort((a, b) => compareStrings(b.voornaam || b.naam, a.voornaam || a.naam));
+                case 'inschrijf-laatste':
+                    return sorted.sort((a, b) => compareStrings(b.inschrijfDatum || '', a.inschrijfDatum || ''));
+                case 'inschrijf-eerste':
+                    return sorted.sort((a, b) => compareStrings(a.inschrijfDatum || '', b.inschrijfDatum || ''));
+                case 'betaald-eerst':
+                    return sorted.sort((a, b) => {
+                        const paidA = a.lidgeldBetaald ? 1 : 0;
+                        const paidB = b.lidgeldBetaald ? 1 : 0;
+                        if (paidA !== paidB) return paidB - paidA;
+                        return compareStrings(a.voornaam || a.naam, b.voornaam || b.naam);
+                    });
+                case 'onbetaald-eerst':
+                    return sorted.sort((a, b) => {
+                        const paidA = a.lidgeldBetaald ? 1 : 0;
+                        const paidB = b.lidgeldBetaald ? 1 : 0;
+                        if (paidA !== paidB) return paidA - paidB;
+                        return compareStrings(a.voornaam || a.naam, b.voornaam || b.naam);
+                    });
+                case 'voornaam-asc':
+                default:
+                    return sorted.sort((a, b) => compareStrings(a.voornaam || a.naam, b.voornaam || b.naam));
+            }
+        }
+
         function renderLeden() {
             const tbody = document.getElementById('leden-lijst-body');
             if(!tbody) return;
             tbody.innerHTML = '';
             
-            const gefilterdeLeden = getGefilterdeLedenLijst();
-            gefilterdeLeden.sort((a,b) => a.naam.localeCompare(b.naam));
+            const gefilterdeLeden = sortLedenArray(getGefilterdeLedenLijst(), getSortOption());
 
             if(gefilterdeLeden.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7">Geen leden gevonden die voldoen aan de filters.</td></tr>';
@@ -373,13 +431,14 @@
             gefilterdeLeden.forEach(lid => {
                 const magOpFoto = lid.fotosToestemming !== undefined ? lid.fotosToestemming : false;
                 const betaaldStatus = lid.lidgeldBetaald || false;
+                const contactHtml = `📧 ${lid.email1 || '–'}${lid.email2 ? `<br>📧 ${lid.email2}` : ''}<br>📞 ${lid.tel1 || '–'}${lid.tel2 ? `<br>📞 ${lid.tel2}` : ''}`;
 
                 tbody.innerHTML += `
                     <tr>
                         <td data-label="Naam & Voornaam"><strong>${lid.naam}</strong> ${lid.voornaam}</td>
                         <td data-label="Groep">${lid.groep}</td>
                         <td data-label="Geboortedatum">${lid.geboortedatum}</td>
-                        <td data-label="Contact">📧 ${lid.email1}<br>📞 ${lid.tel1}</td>
+                        <td data-label="Contact">${contactHtml}</td>
                         <td data-label="Toestemmingen">📸 Foto's: ${magOpFoto ? '✅' : '❌'}<br>📧 Mail: ${lid.marketing ? '✅' : '❌'}</td>
                         <td data-label="Lidgeld"><button class="btn-status ${betaaldStatus ? 'status-paid' : 'status-unpaid'}" data-id="${lid.id}" data-status="${betaaldStatus}">${betaaldStatus ? 'Betaald ✅' : 'Niet betaald ❌'}</button></td>
                         <td data-label="Actie"><button class="btn" style="background:#e74c3c; padding: 5px 10px;" data-delete="${lid.id}">X</button></td>
@@ -420,16 +479,14 @@
 
         // --- EXPORT FUNCTIE NAAR EXCEL (CSV DIE DIRECT GOED OPENT) ---
         function exportToExcel() {
-            const dataToExport = getGefilterdeLedenLijst();
+            const dataToExport = sortLedenArray(getGefilterdeLedenLijst(), getSortOption());
             if(dataToExport.length === 0) {
                 alert("Er valt niks te exporteren. Pas je filters aan.");
                 return;
             }
 
-            dataToExport.sort((a,b) => a.naam.localeCompare(b.naam));
-
             // Kolomtitels (Excel-vriendelijk)
-            const headers = ["Naam", "Voornaam", "Groep", "Geboortedatum", "Email 1", "Telefoon 1", "Foto Toestemming", "Marketing Mail", "Lidgeld Status"];
+            const headers = ["Naam", "Voornaam", "Groep", "Geboortedatum", "Email 1", "Email 2", "Telefoon 1", "Telefoon 2", "Foto Toestemming", "Marketing Mail", "Lidgeld Status"];
             
             // Bouw de rijen op (we gebruiken een 'Semicolon ;' omdat de Nederlandstalige Excel dat eist om direct kolommen te maken)
             let csvContent = "sep=;\n" + headers.join(";") + "\n";
@@ -445,7 +502,9 @@
                     lid.groep || "",
                     lid.geboortedatum || "",
                     lid.email1 || "",
+                    lid.email2 || "",
                     lid.tel1 || "",
+                    lid.tel2 || "",
                     foto,
                     mail,
                     betaald
@@ -479,12 +538,14 @@
             const gefilterdeLeden = alleLeden.filter(l => l.groep === groep);
             if(gefilterdeLeden.length === 0) { container.innerHTML = '<p>Geen leden in deze groep.</p>'; return; }
 
+            const sortOption = document.getElementById('attendance-sort')?.value || 'voornaam-asc';
+            const gesorteerdeLeden = sortLedenArray(gefilterdeLeden, sortOption);
             const key = `${datum}_${groep}`;
             try {
                 const docSnap = await getDoc(doc(db, "aanwezigheden", key));
                 const bestaandeAanwezigheid = docSnap.exists() ? docSnap.data().aanwezigen : [];
 
-                gefilterdeLeden.forEach(lid => {
+                gesorteerdeLeden.forEach(lid => {
                     const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
                     container.innerHTML += `
                         <div class="presence-row">
@@ -610,9 +671,9 @@
             thead.innerHTML = headerHTML;
 
             let bodyHTML = '';
-            leden.sort((a,b) => a.naam.localeCompare(b.naam));
+            const gesorteerdeLeden = sortLedenArray(leden, 'voornaam-asc');
 
-            leden.forEach(lid => {
+            gesorteerdeLeden.forEach(lid => {
                 bodyHTML += `<tr><td><strong>${lid.naam}</strong> ${lid.voornaam}</td>`;
                 let aantalKeerAanwezig = 0;
 
@@ -675,6 +736,8 @@
         document.getElementById('search-leden').addEventListener('input', renderLeden);
         document.getElementById('filter-leden-groep').addEventListener('change', renderLeden);
         document.getElementById('filter-leden-lidgeld').addEventListener('change', renderLeden);
+        document.getElementById('sort-leden').addEventListener('change', renderLeden);
+        document.getElementById('attendance-sort').addEventListener('change', loadAanwezigheidsLijst);
         
         // EVENT LISTENER VOOR DE EXPORT BUTTON
         document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
