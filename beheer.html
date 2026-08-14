@@ -156,6 +156,15 @@
                     </div>
                 </div>
 
+                <div style="margin: 18px 0 12px;">
+                    <label for="les-verslag"><strong>Verslag / algemene notitie voor deze dag en groep:</strong></label>
+                    <textarea id="les-verslag" rows="3" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccd5df; box-sizing:border-box; resize:vertical;" placeholder="Bijv. 4 kinderen waren wat afgeleid, 2 proeflessen, extra oefening voor ..."></textarea>
+                </div>
+
+                <div id="aanwezigheids-lijst"></div>
+
+                <button class="btn" id="save-presence-btn" style="margin: 18px 0; width: 100%;">Aanwezigheden Opslaan</button>
+
                 <div style="background:#f8fafc; border:1px solid #dfe7f1; border-radius:8px; padding:16px; margin:18px 0;">
                     <h3 style="margin-top:0;">Proefles / spontaan lid toevoegen</h3>
                     <div class="flex-row">
@@ -184,16 +193,7 @@
 
                     <div id="proefles-temp-list" style="margin-top: 16px;"></div>
                 </div>
-
-                <div style="margin: 18px 0 12px;">
-                    <label for="les-verslag"><strong>Verslag / algemene notitie voor deze dag en groep:</strong></label>
-                    <textarea id="les-verslag" rows="3" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccd5df; box-sizing:border-box; resize:vertical;" placeholder="Bijv. 4 kinderen waren wat afgeleid, 2 proeflessen, extra oefening voor ..."></textarea>
-                </div>
-
-                <div id="aanwezigheids-lijst"></div>
                 <div id="proefles-lijst" style="margin-top: 24px;"></div>
-                <br>
-                <button class="btn" id="save-presence-btn">Aanwezigheden Opslaan</button>
             </div>
 
             <!-- SECTIE 2: STATISTIEKEN & RAPPORTEN -->
@@ -733,46 +733,17 @@
                     proeflesContainer.innerHTML = `
                         <div style="padding:12px; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; margin-top: 8px;">
                             <h3 style="margin:0 0 10px;">Proefles / spontaan</h3>
-                            ${proeflessen.map((lid, index) => `
+                            ${proeflessen.map((lid) => `
                                 <div style="display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #ffedd5;">
                                     <div>
                                         <strong>${lid.voornaam || 'Onbekend'}</strong> ${lid.naam || ''}<br>
                                         ${lid.telefoon ? `📞 ${lid.telefoon}<br>` : ''}
                                         ${lid.email ? `📧 ${lid.email}` : ''}
                                     </div>
-                                    <button type="button" class="btn" data-delete-proefles="${index}" style="background:#e74c3c; width:auto; padding:6px 10px; font-size:0.8rem;">Verwijder</button>
                                 </div>
                             `).join('')}
                         </div>
                     `;
-
-                    proeflesContainer.querySelectorAll('[data-delete-proefles]').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            const index = Number(btn.dataset.deleteProefles);
-                            try {
-                                const currentDoc = await getDoc(doc(db, "proeflessen", key));
-                                const items = currentDoc.exists() && Array.isArray(currentDoc.data().proeflessen) ? [...currentDoc.data().proeflessen] : [];
-                                items.splice(index, 1);
-
-                                await setDoc(doc(db, "proeflessen", key), { groep, datum, proeflessen: items, updatedAt: new Date().toISOString() }, { merge: true });
-
-                                const attendanceDoc = await getDoc(doc(db, "aanwezigheden", key));
-                                const attendanceData = attendanceDoc.exists() ? attendanceDoc.data() : {};
-                                await setDoc(doc(db, "aanwezigheden", key), {
-                                    ...attendanceData,
-                                    groep,
-                                    datum,
-                                    proeflessen: items,
-                                    updatedAt: new Date().toISOString()
-                                }, { merge: true });
-                            } catch (err) {
-                                console.warn('Verwijderen proefles mislukt:', err);
-                                alert('De proefles kon niet worden verwijderd. Controleer de database-toegang.');
-                                return;
-                            }
-                            loadAanwezigheidsLijst();
-                        });
-                    });
                 }
             }
         }
@@ -849,7 +820,7 @@
                 html += `<td style="padding:8px; border:1px solid #ffedd5;">${lid.telefoon || '-'}</td>`;
                 html += `<td style="padding:8px; border:1px solid #ffedd5;">${lid.email || '-'}</td>`;
                 html += `<td style="padding:8px; border:1px solid #ffedd5; text-align:center;">`;
-                html += `<button type="button" class="btn" data-remove-temp="${index}" style="background:#e74c3c; padding:4px 8px; font-size:0.8rem; width:auto;">X</button>`;
+                html += `<button type="button" class="btn" data-remove-temp="${index}" style="background:#e74c3c; padding:4px 8px; font-size:0.8rem; width:auto; display:none;">X</button>`;
                 html += `</td></tr>`;
             });
 
