@@ -6,6 +6,10 @@
     <title>Beheer - Turnkring Jong en Vrij</title>
     <!-- Chart.js toevoegen voor de grafieken -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Flatpickr voor Europese datepicker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/nl.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #e74c3c; --light: #ecf0f1; --success: #2ecc71; }
         body { font-family: sans-serif; margin: 0; padding: 0; background-color: var(--light); }
@@ -123,22 +127,23 @@
                         <label>Kies Groep:</label>
                         <select id="filter-groep">
                             <option value="Kleuters">Kleuters</option>
+                            <option value="Mini's">Mini's</option>
                             <option value="Meisjes 1">Meisjes 1</option>
                             <option value="Meisjes 2">Meisjes 2</option>
                             <option value="Jongens">Jongens</option>
                             <option value="Juffers 1">Juffers 1</option>
                             <option value="Juffers 2">Juffers 2</option>
                             <option value="Knapen">Knapen</option>
-                            <option value="Turnsters en turners">Turnsters en turners</option>
-                            <option value="Skippies">Skippies</option>
-                            <option value="Jumpers">Jumpers</option>
-                            <option value="Demo Team">Demo Team</option>
+                            <option value="Turners en Turnsters">Turners en Turnsters</option>
+                            <option value="Skippies (Rope Skipping)">Skippies (Rope Skipping)</option>
+                            <option value="Jumpers (Rope Skipping)">Jumpers (Rope Skipping)</option>
+                            <option value="Demo Team (Rope Skipping)">Demo Team (Rope Skipping)</option>
                             <option value="Dance Adults">Dance Adults</option>
                         </select>
                     </div>
                     <div style="flex: 1; min-width: 200px;">
                         <label>Datum Les:</label>
-                        <input type="date" id="les-datum">
+                        <input type="text" id="les-datum" placeholder="DD-MM-YYYY" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;">
                     </div>
                     <div style="flex: 1; min-width: 200px;">
                         <label>Sorteer op:</label>
@@ -150,7 +155,41 @@
                         </select>
                     </div>
                 </div>
+
+                <div style="background:#f8fafc; border:1px solid #dfe7f1; border-radius:8px; padding:16px; margin:18px 0;">
+                    <h3 style="margin-top:0;">Proefles / spontaan lid toevoegen</h3>
+                    <div class="flex-row">
+                        <div style="flex:1; min-width:150px;">
+                            <label>Voornaam*</label>
+                            <input type="text" id="proefles-voornaam" placeholder="Bijv. Emma">
+                        </div>
+                        <div style="flex:1; min-width:150px;">
+                            <label>Achternaam</label>
+                            <input type="text" id="proefles-naam" placeholder="Bijv. De Vos">
+                        </div>
+                    </div>
+                    <div class="flex-row" style="margin-top: 12px;">
+                        <div style="flex:1; min-width:150px;">
+                            <label>Telefoonnummer</label>
+                            <input type="tel" id="proefles-telefoon" placeholder="Bijv. 0470 00 00 00">
+                        </div>
+                        <div style="flex:1; min-width:150px;">
+                            <label>E-mail</label>
+                            <input type="email" id="proefles-email" placeholder="Bijv. naam@email.com">
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <button class="btn" id="add-proefles-btn" style="width: auto; min-width: 220px;">Toevoegen aan proefles</button>
+                    </div>
+                </div>
+
+                <div style="margin: 18px 0 12px;">
+                    <label for="les-verslag"><strong>Verslag / algemene notitie voor deze dag en groep:</strong></label>
+                    <textarea id="les-verslag" rows="3" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ccd5df; box-sizing:border-box; resize:vertical;" placeholder="Bijv. 4 kinderen waren wat afgeleid, 2 proeflessen, extra oefening voor ..."></textarea>
+                </div>
+
                 <div id="aanwezigheids-lijst"></div>
+                <div id="proefles-lijst" style="margin-top: 24px;"></div>
                 <br>
                 <button class="btn" id="save-presence-btn">Aanwezigheden Opslaan</button>
             </div>
@@ -171,16 +210,17 @@
                         <label><strong>Selecteer Groep:</strong></label>
                         <select id="stats-groep">
                             <option value="Kleuters">Kleuters</option>
+                            <option value="Mini's">Mini's</option>
                             <option value="Meisjes 1">Meisjes 1</option>
                             <option value="Meisjes 2">Meisjes 2</option>
                             <option value="Jongens">Jongens</option>
                             <option value="Juffers 1">Juffers 1</option>
                             <option value="Juffers 2">Juffers 2</option>
                             <option value="Knapen">Knapen</option>
-                            <option value="Turnsters en turners">Turnsters en turners</option>
-                            <option value="Skippies">Skippies</option>
-                            <option value="Jumpers">Jumpers</option>
-                            <option value="Demo Team">Demo Team</option>
+                            <option value="Turners en Turnsters">Turners en Turnsters</option>
+                            <option value="Skippies (Rope Skipping)">Skippies (Rope Skipping)</option>
+                            <option value="Jumpers (Rope Skipping)">Jumpers (Rope Skipping)</option>
+                            <option value="Demo Team (Rope Skipping)">Demo Team (Rope Skipping)</option>
                             <option value="Dance Adults">Dance Adults</option>
                         </select>
                     </div>
@@ -207,6 +247,7 @@
                         <canvas id="lidgeldChart"></canvas>
                     </div>
                 </div>
+                <div id="trainerChart" style="margin-top: 20px;"></div>
 
                 <br>
                 <h3>Individueel Aanwezigheidsrapport (Leden-Matrix)</h3>
@@ -236,16 +277,17 @@
                         <select id="filter-leden-groep">
                             <option value="alle">-- Alle groepen --</option>
                             <option value="Kleuters">Kleuters</option>
+                            <option value="Mini's">Mini's</option>
                             <option value="Meisjes 1">Meisjes 1</option>
                             <option value="Meisjes 2">Meisjes 2</option>
                             <option value="Jongens">Jongens</option>
                             <option value="Juffers 1">Juffers 1</option>
                             <option value="Juffers 2">Juffers 2</option>
                             <option value="Knapen">Knapen</option>
-                            <option value="Turnsters en turners">Turnsters en turners</option>
-                            <option value="Skippies">Skippies</option>
-                            <option value="Jumpers">Jumpers</option>
-                            <option value="Demo Team">Demo Team</option>
+                            <option value="Turners en Turnsters">Turners en Turnsters</option>
+                            <option value="Skippies (Rope Skipping)">Skippies (Rope Skipping)</option>
+                            <option value="Jumpers (Rope Skipping)">Jumpers (Rope Skipping)</option>
+                            <option value="Demo Team (Rope Skipping)">Demo Team (Rope Skipping)</option>
                             <option value="Dance Adults">Dance Adults</option>
                         </select>
                     </div>
@@ -371,7 +413,7 @@
                     (lid.tel1 && lid.tel1.includes(zoekTerm)) ||
                     (lid.tel2 && lid.tel2.includes(zoekTerm));
 
-                const matchGroep = gekozenGroep === 'alle' || lid.groep === gekozenGroep;
+                const matchGroep = gekozenGroep === 'alle' || lidHeeftGroep(lid, gekozenGroep);
 
                 const betaaldStatus = lid.lidgeldBetaald || false;
                 const matchLidgeld = gekozenLidgeld === 'alle' ||
@@ -386,15 +428,68 @@
             return document.getElementById('sort-leden')?.value || 'voornaam-asc';
         }
 
+        function normalizeGroepLijst(groepWaarde) {
+            if (Array.isArray(groepWaarde)) {
+                return groepWaarde
+                    .map(v => String(v || '').trim())
+                    .filter(Boolean);
+            }
+
+            if (!groepWaarde) return [];
+
+            return String(groepWaarde)
+                .split(',')
+                .map(v => v.trim())
+                .filter(Boolean);
+        }
+
+        function lidHeeftGroep(lid, groepNaam) {
+            if (!groepNaam) return true;
+            const groepen = normalizeGroepLijst(lid?.groep ?? lid?.afdeling ?? []);
+            return groepen.some(g => g.toLowerCase() === String(groepNaam).toLowerCase().trim());
+        }
+
+        function canManageTrainerFlags() {
+            const email = auth?.currentUser?.email || '';
+            return !!email && email.toLowerCase() !== 'trainers@jongenvrij.be';
+        }
+
+        function isTrainerLid(lid) {
+            return !!(lid && (lid.isTrainer === true || lid.trainer === true));
+        }
+
         function compareStrings(a, b) {
             return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+        }
+
+        function formatDateEuropean(dateString) {
+            if (!dateString) return '--';
+            const [year, month, day] = dateString.split('-');
+            return `${day}-${month}-${year}`;
+        }
+
+        function convertEuropeanToISO(dateString) {
+            if (!dateString) return '';
+            // Konverteer DD-MM-YYYY naar YYYY-MM-DD
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                return `${year}-${month}-${day}`;
+            }
+            return dateString;
+        }
+
+        function getNaamSortValue(lid) {
+            const voornaam = String(lid?.voornaam || '').trim();
+            const achternaam = String(lid?.naam || '').trim();
+            return (voornaam ? `${voornaam} ${achternaam}` : achternaam).trim();
         }
 
         function sortLedenArray(leden, sortOption) {
             const sorted = [...leden];
             switch (sortOption) {
                 case 'voornaam-desc':
-                    return sorted.sort((a, b) => compareStrings(b.voornaam || b.naam, a.voornaam || a.naam));
+                    return sorted.sort((a, b) => compareStrings(getNaamSortValue(b), getNaamSortValue(a)));
                 case 'inschrijf-laatste':
                     return sorted.sort((a, b) => compareStrings(b.inschrijfDatum || '', a.inschrijfDatum || ''));
                 case 'inschrijf-eerste':
@@ -404,18 +499,18 @@
                         const paidA = a.lidgeldBetaald ? 1 : 0;
                         const paidB = b.lidgeldBetaald ? 1 : 0;
                         if (paidA !== paidB) return paidB - paidA;
-                        return compareStrings(a.voornaam || a.naam, b.voornaam || b.naam);
+                        return compareStrings(getNaamSortValue(a), getNaamSortValue(b));
                     });
                 case 'onbetaald-eerst':
                     return sorted.sort((a, b) => {
                         const paidA = a.lidgeldBetaald ? 1 : 0;
                         const paidB = b.lidgeldBetaald ? 1 : 0;
                         if (paidA !== paidB) return paidA - paidB;
-                        return compareStrings(a.voornaam || a.naam, b.voornaam || b.naam);
+                        return compareStrings(getNaamSortValue(a), getNaamSortValue(b));
                     });
                 case 'voornaam-asc':
                 default:
-                    return sorted.sort((a, b) => compareStrings(a.voornaam || a.naam, b.voornaam || b.naam));
+                    return sorted.sort((a, b) => compareStrings(getNaamSortValue(a), getNaamSortValue(b)));
             }
         }
 
@@ -434,17 +529,21 @@
             gefilterdeLeden.forEach(lid => {
                 const magOpFoto = lid.fotosToestemming !== undefined ? lid.fotosToestemming : false;
                 const betaaldStatus = lid.lidgeldBetaald || false;
+                const trainerStatus = isTrainerLid(lid);
                 const contactHtml = `📧 ${lid.email1 || '–'}${lid.email2 ? `<br>📧 ${lid.email2}` : ''}<br>📞 ${lid.tel1 || '–'}${lid.tel2 ? `<br>📞 ${lid.tel2}` : ''}`;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td data-label="Naam & Voornaam"><strong>${lid.naam}</strong> ${lid.voornaam}</td>
+                        <td data-label="Naam & Voornaam"><strong>${lid.naam}</strong> ${lid.voornaam}${trainerStatus ? ' ⭐' : ''}</td>
                         <td data-label="Groep">${lid.groep}</td>
-                        <td data-label="Geboortedatum">${lid.geboortedatum}</td>
+                        <td data-label="Geboortedatum">${formatDateEuropean(lid.geboortedatum)}</td>
                         <td data-label="Contact">${contactHtml}</td>
                         <td data-label="Toestemmingen">📸 Foto's: ${magOpFoto ? '✅' : '❌'}<br>📧 Mail: ${lid.marketing ? '✅' : '❌'}</td>
                         <td data-label="Lidgeld"><button class="btn-status ${betaaldStatus ? 'status-paid' : 'status-unpaid'}" data-id="${lid.id}" data-status="${betaaldStatus}">${betaaldStatus ? 'Betaald ✅' : 'Niet betaald ❌'}</button></td>
-                        <td data-label="Actie"><button class="btn" style="background:#e74c3c; padding: 5px 10px;" data-delete="${lid.id}">X</button></td>
+                        <td data-label="Actie">
+                            <button class="btn" data-trainer-toggle="${lid.id}" style="background:${trainerStatus ? '#f1c40f' : '#95a5a6'}; padding: 5px 10px; margin-bottom: 6px; width: auto; min-width: 42px;" ${canManageTrainerFlags() ? '' : 'disabled'}>${trainerStatus ? '⭐' : '☆'}</button>
+                            <button class="btn" style="background:#e74c3c; padding: 5px 10px; width: auto; min-width: 42px;" data-delete="${lid.id}">X</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -454,6 +553,20 @@
                     const id = e.target.dataset.id;
                     const huidigeStatus = e.target.dataset.status === 'true';
                     await updateDoc(doc(db, "leden", id), { lidgeldBetaald: !huidigeStatus });
+                });
+            });
+
+            tbody.querySelectorAll('[data-trainer-toggle]').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    if (!canManageTrainerFlags()) {
+                        alert('Alleen niet-trainer accounts mogen trainers markeren.');
+                        return;
+                    }
+
+                    const id = e.target.dataset.trainerToggle;
+                    const lid = alleLeden.find(item => item.id === id);
+                    if (!lid) return;
+                    await updateDoc(doc(db, "leden", id), { isTrainer: !isTrainerLid(lid), trainer: !isTrainerLid(lid) });
                 });
             });
 
@@ -503,7 +616,7 @@
                     lid.naam || "",
                     lid.voornaam || "",
                     lid.groep || "",
-                    lid.geboortedatum || "",
+                    formatDateEuropean(lid.geboortedatum) || "--",
                     lid.email1 || "",
                     lid.email2 || "",
                     lid.tel1 || "",
@@ -524,7 +637,8 @@
             const url = URL.createObjectURL(blob);
             
             link.setAttribute("href", url);
-            link.setAttribute("download", `Ledenlijst_Jong_en_Vrij_${new Date().toISOString().split('T')[0]}.csv`);
+            const vandaag = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `Ledenlijst_Jong_en_Vrij_${formatDateEuropean(vandaag)}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -533,51 +647,252 @@
 
         async function loadAanwezigheidsLijst() {
             const groep = document.getElementById('filter-groep').value;
-            const datum = document.getElementById('les-datum').value;
+            const datumDisplay = document.getElementById('les-datum').value;
+            const datum = convertEuropeanToISO(datumDisplay);
             const container = document.getElementById('aanwezigheids-lijst');
+            const proeflesContainer = document.getElementById('proefles-lijst');
+            const verslagField = document.getElementById('les-verslag');
             if(!container) return;
             container.innerHTML = '';
+            if(proeflesContainer) proeflesContainer.innerHTML = '';
+            if(verslagField) verslagField.value = '';
 
-            const gefilterdeLeden = alleLeden.filter(l => l.groep === groep);
-            if(gefilterdeLeden.length === 0) { container.innerHTML = '<p>Geen leden in deze groep.</p>'; return; }
-
-            const sortOption = document.getElementById('attendance-sort')?.value || 'voornaam-asc';
-            const gesorteerdeLeden = sortLedenArray(gefilterdeLeden, sortOption);
             const key = `${datum}_${groep}`;
+            const sortOption = document.getElementById('attendance-sort')?.value || 'voornaam-asc';
+
+            let aanwezigheidData = {};
+            let proeflessen = [];
+
             try {
                 const docSnap = await getDoc(doc(db, "aanwezigheden", key));
-                const bestaandeAanwezigheid = docSnap.exists() ? docSnap.data().aanwezigen : [];
+                aanwezigheidData = docSnap.exists() ? docSnap.data() : {};
+            } catch (e) {
+                console.error('Fout bij laden aanwezigheid-document:', e);
+                aanwezigheidData = {};
+            }
 
-                gesorteerdeLeden.forEach(lid => {
+            const gefilterdeLeden = alleLeden.filter(l => lidHeeftGroep(l, groep));
+            if(gefilterdeLeden.length === 0) { container.innerHTML = '<p>Geen leden in deze groep.</p>'; }
+
+            const bestaandeAanwezigheid = Array.isArray(aanwezigheidData.aanwezigen) ? aanwezigheidData.aanwezigen : [];
+            const bestaandeTrainerAanwezigheid = Array.isArray(aanwezigheidData.trainerAanwezigen) ? aanwezigheidData.trainerAanwezigen : [];
+            const bestaandeVerslag = aanwezigheidData.verslag || '';
+            const bestaandeProeflessen = Array.isArray(aanwezigheidData.proeflessen) ? aanwezigheidData.proeflessen : [];
+
+            if(verslagField) verslagField.value = bestaandeVerslag;
+
+            const gesorteerdeLeden = sortLedenArray(gefilterdeLeden, sortOption);
+            const trainerLeden = gesorteerdeLeden.filter(l => isTrainerLid(l));
+            const reguliereLeden = gesorteerdeLeden.filter(l => !isTrainerLid(l));
+
+            if (trainerLeden.length > 0) {
+                container.innerHTML += `
+                    <div style="margin: 16px 0 10px; padding: 12px; border: 1px solid #f4d03f; background: #fffdf0; border-radius: 8px;">
+                        <h3 style="margin: 0 0 10px;">Trainers</h3>
+                        ${trainerLeden.map(lid => {
+                            const isAanwezig = bestaandeTrainerAanwezigheid.includes(lid.id);
+                            return `
+                                <label class="presence-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f7e7a2;">
+                                    <span><strong>${lid.naam}</strong> ${lid.voornaam} ⭐</span>
+                                    <input type="checkbox" class="trainer-presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            if (reguliereLeden.length > 0) {
+                reguliereLeden.forEach(lid => {
                     const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
                     container.innerHTML += `
-                        <label class="presence-row">
+                        <label class="presence-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
                             <span><strong>${lid.naam}</strong> ${lid.voornaam}</span>
                             <input type="checkbox" class="presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
                         </label>
                     `;
                 });
-            } catch (e) { container.innerHTML = '<p>Fout bij laden aanwezigheden.</p>'; }
+            }
+
+            try {
+                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
+                proeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
+                    ? proeflesDocSnap.data().proeflessen
+                    : bestaandeProeflessen;
+            } catch (e) {
+                console.warn('Proefles-collectie niet beschikbaar, toon alleen aanwezigheden:', e);
+                proeflessen = bestaandeProeflessen;
+            }
+
+            if(proeflesContainer) {
+                if(proeflessen.length === 0) {
+                    proeflesContainer.innerHTML = '<div style="padding:12px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px;"><strong>Proefles:</strong> nog geen spontane inschrijvingen voor deze les.</div>';
+                } else {
+                    proeflesContainer.innerHTML = `
+                        <div style="padding:12px; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; margin-top: 8px;">
+                            <h3 style="margin:0 0 10px;">Proefles / spontaan</h3>
+                            ${proeflessen.map((lid, index) => `
+                                <div style="display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #ffedd5;">
+                                    <div>
+                                        <strong>${lid.voornaam || 'Onbekend'}</strong> ${lid.naam || ''}<br>
+                                        ${lid.telefoon ? `📞 ${lid.telefoon}<br>` : ''}
+                                        ${lid.email ? `📧 ${lid.email}` : ''}
+                                    </div>
+                                    <button type="button" class="btn" data-delete-proefles="${index}" style="background:#e74c3c; width:auto; padding:6px 10px; font-size:0.8rem;">Verwijder</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+
+                    proeflesContainer.querySelectorAll('[data-delete-proefles]').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const index = Number(btn.dataset.deleteProefles);
+                            try {
+                                const currentDoc = await getDoc(doc(db, "proeflessen", key));
+                                const items = currentDoc.exists() && Array.isArray(currentDoc.data().proeflessen) ? [...currentDoc.data().proeflessen] : [];
+                                items.splice(index, 1);
+
+                                await setDoc(doc(db, "proeflessen", key), { groep, datum, proeflessen: items, updatedAt: new Date().toISOString() }, { merge: true });
+
+                                const attendanceDoc = await getDoc(doc(db, "aanwezigheden", key));
+                                const attendanceData = attendanceDoc.exists() ? attendanceDoc.data() : {};
+                                await setDoc(doc(db, "aanwezigheden", key), {
+                                    ...attendanceData,
+                                    groep,
+                                    datum,
+                                    proeflessen: items,
+                                    updatedAt: new Date().toISOString()
+                                }, { merge: true });
+                            } catch (err) {
+                                console.warn('Verwijderen proefles mislukt:', err);
+                                alert('De proefles kon niet worden verwijderd. Controleer de database-toegang.');
+                                return;
+                            }
+                            loadAanwezigheidsLijst();
+                        });
+                    });
+                }
+            }
         }
 
         async function saveAanwezigheid() {
             const groep = document.getElementById('filter-groep').value;
-            const datum = document.getElementById('les-datum').value;
+            const datumDisplay = document.getElementById('les-datum').value;
+            const datum = convertEuropeanToISO(datumDisplay);
             if(!datum) { alert("Kies een datum!"); return; }
 
             const checkboxes = document.querySelectorAll('.presence-check');
             const aanwezigeIds = [];
             checkboxes.forEach(cb => { if(cb.checked) aanwezigeIds.push(cb.value); });
 
+            const trainerCheckboxes = document.querySelectorAll('.trainer-presence-check');
+            const trainerAanwezigeIds = [];
+            trainerCheckboxes.forEach(cb => { if(cb.checked) trainerAanwezigeIds.push(cb.value); });
+
+            const verslag = document.getElementById('les-verslag')?.value.trim() || '';
             const key = `${datum}_${groep}`;
+            let proeflessen = [];
+
             try {
-                await setDoc(doc(db, "aanwezigheden", key), { 
+                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
+                proeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
+                    ? proeflesDocSnap.data().proeflessen
+                    : [];
+            } catch (e) {
+                console.warn('Proefles-collectie niet beschikbaar tijdens opslaan aanwezigheden:', e);
+                proeflessen = [];
+            }
+
+            try {
+                await setDoc(doc(db, "aanwezigheden", key), {
                     aanwezigen: aanwezigeIds,
+                    trainerAanwezigen: trainerAanwezigeIds,
                     groep: groep,
-                    datum: datum
-                });
+                    datum: datum,
+                    verslag: verslag,
+                    proeflessen: proeflessen,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
                 alert("Aanwezigheden live opgeslagen!");
-            } catch(e) { alert("Niet toegestaan."); }
+            } catch(e) {
+                console.error(e);
+                alert("Niet toegestaan.");
+            }
+        }
+
+        async function addProeflesLid() {
+            const groep = document.getElementById('filter-groep').value;
+            const datumDisplay = document.getElementById('les-datum').value;
+            const datum = convertEuropeanToISO(datumDisplay);
+            if(!datum) { alert("Kies eerst een datum!"); return; }
+
+            const voornaam = document.getElementById('proefles-voornaam').value.trim();
+            const naam = document.getElementById('proefles-naam').value.trim();
+            const telefoon = document.getElementById('proefles-telefoon').value.trim();
+            const email = document.getElementById('proefles-email').value.trim();
+
+            if(!voornaam) {
+                alert("Voornaam is verplicht bij een proefles-invoer.");
+                return;
+            }
+
+            const key = `${datum}_${groep}`;
+            const nieuwLid = {
+                voornaam,
+                naam,
+                telefoon,
+                email,
+                toegevoegdOp: new Date().toISOString()
+            };
+
+            let bestaandeProeflessen = [];
+            try {
+                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
+                bestaandeProeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
+                    ? proeflesDocSnap.data().proeflessen
+                    : [];
+            } catch (e) {
+                console.warn('Proefles-collectie niet beschikbaar bij toevoegen:', e);
+                bestaandeProeflessen = [];
+            }
+
+            const updatedProeflessen = [...bestaandeProeflessen, nieuwLid];
+
+            try {
+                await setDoc(doc(db, "proeflessen", key), {
+                    groep,
+                    datum,
+                    proeflessen: updatedProeflessen,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (e) {
+                console.warn('Opslaan in proeflessen mislukt, zorg dat de collectie wel toegelaten is:', e);
+            }
+
+            try {
+                const aanwezigheidsDocSnap = await getDoc(doc(db, "aanwezigheden", key));
+                const aanwezigheidData = aanwezigheidsDocSnap.exists() ? aanwezigheidsDocSnap.data() : {};
+
+                await setDoc(doc(db, "aanwezigheden", key), {
+                    ...aanwezigheidData,
+                    groep,
+                    datum,
+                    proeflessen: updatedProeflessen,
+                    verslag: aanwezigheidData.verslag || '',
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                document.getElementById('proefles-voornaam').value = '';
+                document.getElementById('proefles-naam').value = '';
+                document.getElementById('proefles-telefoon').value = '';
+                document.getElementById('proefles-email').value = '';
+
+                alert("Proefles-lid toegevoegd en opgeslagen voor deze dag.");
+                loadAanwezigheidsLijst();
+            } catch (e) {
+                console.error(e);
+                alert("Opslaan van proefles is mislukt.");
+            }
         }
 
         // --- STATISTIEKEN LOGICA ---
@@ -599,27 +914,40 @@
 
             if(!van || !tot) return;
 
-            const q = query(collection(db, "aanwezigheden"), 
-                where("groep", "==", groep),
-                where("datum", ">=", van),
-                where("datum", "<=", tot)
-            );
-
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(collection(db, "aanwezigheden"));
             let dataPunten = [];
             let alleLessenGelezen = [];
+            let trainerData = {}; // { trainerId: [{ datum, aanwezig }, ...] }
 
             querySnapshot.forEach((doc) => {
                 const d = doc.data();
+                const datumValue = d.datum;
+                const groepValue = d.groep;
+                if (!datumValue || !groepValue) return;
+                if (!(datumValue >= van && datumValue <= tot)) return;
+                if (!lidHeeftGroep({ groep: groepValue }, groep)) return;
+
                 const aantalAanwezigen = d.aanwezigen ? d.aanwezigen.length : 0;
-                dataPunten.push({ datum: d.datum, aantal: aantalAanwezigen });
-                alleLessenGelezen.push({ datum: d.datum, aanwezigen: d.aanwezigen || [] });
+                dataPunten.push({ datum: datumValue, aantal: aantalAanwezigen });
+                alleLessenGelezen.push({ datum: datumValue, aanwezigen: d.aanwezigen || [], trainerAanwezigen: d.trainerAanwezigen || [] });
+
+                // Verzamel trainer-aanwezigheid per datum
+                const trainerIds = Array.isArray(d.trainerAanwezigen) ? d.trainerAanwezigen : [];
+                trainerIds.forEach(id => {
+                    const trainer = alleLeden.find(member => member.id === id);
+                    // Filter trainers die niet in de geselecteerde groep zitten
+                    if (trainer && !lidHeeftGroep(trainer, groep)) return;
+                    if (!trainerData[id]) trainerData[id] = [];
+                    trainerData[id].push({ datum: datumValue, aanwezig: true });
+                });
             });
+
+            buildTrainerMatrix(trainerData, alleLessenGelezen);
 
             dataPunten.sort((a,b) => new Date(a.datum) - new Date(b.datum));
             alleLessenGelezen.sort((a,b) => new Date(a.datum) - new Date(b.datum));
 
-            const labels = dataPunten.map(p => p.datum);
+            const labels = dataPunten.map(p => formatDateEuropean(p.datum));
             const data = dataPunten.map(p => p.aantal);
 
             const ctx = document.getElementById('aanwezigheidChart').getContext('2d');
@@ -641,7 +969,7 @@
                 options: { responsive: true, maintainAspectRatio: false }
             });
 
-            const gefilterdeLeden = alleLeden.filter(l => l.groep === groep);
+            const gefilterdeLeden = alleLeden.filter(l => lidHeeftGroep(l, groep) && !isTrainerLid(l));
             if(gefilterdeLeden.length > 0 && alleLessenGelezen.length > 0) {
                 let totaalChecks = gefilterdeLeden.length * alleLessenGelezen.length;
                 let totaalAanwezig = data.reduce((a, b) => a + b, 0);
@@ -652,6 +980,42 @@
             }
 
             buildIndividualMatrix(gefilterdeLeden, alleLessenGelezen);
+        }
+
+        function buildTrainerMatrix(trainerData, lessen) {
+            const container = document.getElementById('trainerChart');
+            if (!container) return;
+
+            if (Object.keys(trainerData).length === 0) {
+                container.innerHTML = '<div style="padding:12px; background:#f8fafc; border:1px solid #dfe7f1; border-radius:8px; text-align:center;"><p>Geen trainers gemarkeerd voor deze groep in deze periode.</p></div>';
+                return;
+            }
+
+            let html = '<h3 style="margin-top:0; margin-bottom:10px;">Trainersrooster</h3><table style="width:100%; border-collapse: collapse; font-size:0.9rem;">';
+            html += '<tr><th style="padding:8px; border:1px solid #ddd; background:#f1c40f; text-align:left;">Trainer</th>';
+
+            lessen.forEach(les => {
+                html += `<th style="padding:8px; border:1px solid #ddd; background:#f1c40f; text-align:center;">${formatDateEuropean(les.datum)}</th>`;
+            });
+            html += '<th style="padding:8px; border:1px solid #ddd; background:#f1c40f; text-align:center;">Totaal</th></tr>';
+
+            Object.keys(trainerData).forEach(trainerId => {
+                const trainer = alleLeden.find(m => m.id === trainerId);
+                const trainerNaam = trainer ? `${trainer.voornaam || ''} ${trainer.naam || ''}`.trim() : trainerId;
+                const aanwezigDatums = new Set(trainerData[trainerId].map(d => d.datum));
+                let totaal = 0;
+
+                html += `<tr><td style="padding:8px; border:1px solid #ddd; font-weight:bold;">${trainerNaam}</td>`;
+                lessen.forEach(les => {
+                    const isAanwezig = aanwezigDatums.has(les.datum);
+                    if (isAanwezig) totaal++;
+                    html += `<td style="padding:8px; border:1px solid #ddd; text-align:center; color:${isAanwezig ? '#2ecc71' : '#e74c3c'};">${isAanwezig ? '✅' : '❌'}</td>`;
+                });
+                html += `<td style="padding:8px; border:1px solid #ddd; text-align:center; font-weight:bold;">${totaal}</td></tr>`;
+            });
+
+            html += '</table>';
+            container.innerHTML = html;
         }
 
         function buildIndividualMatrix(leden, lessen) {
@@ -667,7 +1031,7 @@
 
             let headerHTML = '<tr><th>Naam & Voornaam turner</th>';
             lessen.forEach(les => {
-                const mDate = les.datum.substring(5);
+                const mDate = formatDateEuropean(les.datum);
                 headerHTML += `<th style="text-align:center;">${mDate}</th>`;
             });
             headerHTML += '<th style="text-align:center;">Opkomst %</th></tr>';
@@ -699,7 +1063,17 @@
 
         function renderGroepenChart() {
             const groepenTelling = {};
-            alleLeden.forEach(l => { groepenTelling[l.groep] = (groepenTelling[l.groep] || 0) + 1; });
+            alleLeden.forEach(l => {
+                const groepen = normalizeGroepLijst(l?.groep ?? l?.afdeling ?? []);
+                if (groepen.length === 0) {
+                    groepenTelling['Onbekend'] = (groepenTelling['Onbekend'] || 0) + 1;
+                    return;
+                }
+
+                groepen.forEach(groepNaam => {
+                    groepenTelling[groepNaam] = (groepenTelling[groepNaam] || 0) + 1;
+                });
+            });
 
             const ctx = document.getElementById('groepenChart').getContext('2d');
             if (barChart) barChart.destroy();
@@ -716,6 +1090,11 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
+        }
+
+        function renderTrainerChart(trainerCounts) {
+            // Functie niet meer nodig - gebruiken nu buildTrainerMatrix in plaats van taartdiagram
+            return;
         }
 
         function renderLidgeldChart(betaald, onbetaald) {
@@ -749,6 +1128,17 @@
         document.getElementById('filter-groep').addEventListener('change', loadAanwezigheidsLijst);
         document.getElementById('les-datum').addEventListener('change', loadAanwezigheidsLijst);
         document.getElementById('save-presence-btn').addEventListener('click', saveAanwezigheid);
+        document.getElementById('add-proefles-btn').addEventListener('click', addProeflesLid);
+        document.getElementById('les-verslag').addEventListener('input', () => {
+            const groep = document.getElementById('filter-groep').value;
+            const datumDisplay = document.getElementById('les-datum').value;
+            const datum = convertEuropeanToISO(datumDisplay);
+            if(!datum || !groep) return;
+            const key = `${datum}_${groep}`;
+            const verslag = document.getElementById('les-verslag').value;
+            const docRef = doc(db, 'aanwezigheden', key);
+            setDoc(docRef, { groep, datum, verslag, updatedAt: new Date().toISOString() }, { merge: true });
+        });
 
         document.getElementById('stats-groep').addEventListener('change', loadAanwezigheidsStats);
         document.getElementById('stats-van').addEventListener('change', loadAanwezigheidsStats);
@@ -758,9 +1148,21 @@
         const maandGeleden = new Date();
         maandGeleden.setMonth(vandaag.getMonth() - 1);
 
-        document.getElementById('les-datum').value = vandaag.toISOString().split('T')[0];
-        document.getElementById('stats-tot').value = vandaag.toISOString().split('T')[0];
-        document.getElementById('stats-van').value = maandGeleden.toISOString().split('T')[0];
+        const vandaagISO = vandaag.toISOString().split('T')[0];
+        const maandGeledenISO = maandGeleden.toISOString().split('T')[0];
+
+        // Flatpickr configuratie voor les-datum (Europese datepicker)
+        flatpickr("#les-datum", {
+            locale: "nl",
+            dateFormat: "d-m-Y",
+            defaultDate: new Date(),
+            allowInput: true,
+            altInput: true,
+            altFormat: "d-m-Y"
+        });
+
+        document.getElementById('stats-tot').value = vandaagISO;
+        document.getElementById('stats-van').value = maandGeledenISO;
 
         window.showSection = function(sectionId) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
