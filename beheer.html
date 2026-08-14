@@ -179,8 +179,10 @@
                         </div>
                     </div>
                     <div style="margin-top: 12px;">
-                        <button class="btn" id="add-proefles-btn" style="width: auto; min-width: 220px;">Toevoegen aan proefles</button>
+                        <button class="btn" id="add-proefles-btn" style="width: auto; min-width: 220px;">+ Toevoegen aan proefles</button>
                     </div>
+
+                    <div id="proefles-temp-list" style="margin-top: 16px;"></div>
                 </div>
 
                 <div style="margin: 18px 0 12px;">
@@ -791,16 +793,16 @@
 
             const verslag = document.getElementById('les-verslag')?.value.trim() || '';
             const key = `${datum}_${groep}`;
-            let proeflessen = [];
 
+            // Eerst laden wat al in aanwezigheden bestaat (inclusief proeflessen)
+            let proeflessen = [];
             try {
-                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
-                proeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
-                    ? proeflesDocSnap.data().proeflessen
-                    : [];
+                const bestaandDoc = await getDoc(doc(db, "aanwezigheden", key));
+                if (bestaandDoc.exists() && Array.isArray(bestaandDoc.data().proeflessen)) {
+                    proeflessen = bestaandDoc.data().proeflessen;
+                }
             } catch (e) {
-                console.warn('Proefles-collectie niet beschikbaar tijdens opslaan aanwezigheden:', e);
-                proeflessen = [];
+                console.warn('Kon bestaande proeflessen niet laden:', e);
             }
 
             try {
@@ -820,12 +822,63 @@
             }
         }
 
-        async function addProeflesLid() {
-            const groep = document.getElementById('filter-groep').value;
-            const datumDisplay = document.getElementById('les-datum').value;
-            const datum = convertEuropeanToISO(datumDisplay);
-            if(!datum) { alert("Kies eerst een datum!"); return; }
+        let tempProeflessen = []; // Tijdelijke array voor meerdere proefles-invoeren
 
+        function renderTempProeflesList() {
+            const container = document.getElementById('proefles-temp-list');
+            if (!container) return;
+
+            if (tempProeflessen.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:12px; margin-top:12px;">';
+            html += `<h4 style="margin:0 0 10px; color:#c65911;">Toe te voegen (${tempProeflessen.length}):</h4>`;
+            html += '<table style="width:100%; border-collapse: collapse; font-size:0.9rem;">';
+            html += '<tr><th style="padding:8px; border:1px solid #ffedd5; text-align:left;">Voornaam</th>';
+            html += '<th style="padding:8px; border:1px solid #ffedd5; text-align:left;">Achternaam</th>';
+            html += '<th style="padding:8px; border:1px solid #ffedd5; text-align:left;">Telefoon</th>';
+            html += '<th style="padding:8px; border:1px solid #ffedd5; text-align:left;">E-mail</th>';
+            html += '<th style="padding:8px; border:1px solid #ffedd5; text-align:center;">Actie</th></tr>';
+
+            tempProeflessen.forEach((lid, index) => {
+                html += `<tr>`;
+                html += `<td style="padding:8px; border:1px solid #ffedd5;">${lid.voornaam}</td>`;
+                html += `<td style="padding:8px; border:1px solid #ffedd5;">${lid.naam || '-'}</td>`;
+                html += `<td style="padding:8px; border:1px solid #ffedd5;">${lid.telefoon || '-'}</td>`;
+                html += `<td style="padding:8px; border:1px solid #ffedd5;">${lid.email || '-'}</td>`;
+                html += `<td style="padding:8px; border:1px solid #ffedd5; text-align:center;">`;
+                html += `<button type="button" class="btn" data-remove-temp="${index}" style="background:#e74c3c; padding:4px 8px; font-size:0.8rem; width:auto;">X</button>`;
+                html += `</td></tr>`;
+            });
+
+            html += '</table>';
+            html += `<div style="margin-top:12px; display:flex; gap:8px;">`;
+            html += `<button class="btn" id="save-temp-proefles-btn" style="background:#2ecc71; width:auto;">✓ Alles opslaan</button>`;
+            html += `<button class="btn" id="clear-temp-proefles-btn" style="background:#95a5a6; width:auto;">Leeg maken</button>`;
+            html += `</div></div>`;
+
+            container.innerHTML = html;
+
+            // Event listeners voor verwijderen
+            container.querySelectorAll('[data-remove-temp]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = Number(e.target.dataset.removeTemp);
+                    tempProeflessen.splice(index, 1);
+                    renderTempProeflesList();
+                });
+            });
+
+            // Event listener voor alles opslaan
+            document.getElementById('save-temp-proefles-btn')?.addEventListener('click', saveAllTempProeflessen);
+            document.getElementById('clear-temp-proefles-btn')?.addEventListener('click', () => {
+                tempProeflessen = [];
+                renderTempProeflesList();
+            });
+        }
+
+        function addProeflesLid() {
             const voornaam = document.getElementById('proefles-voornaam').value.trim();
             const naam = document.getElementById('proefles-naam').value.trim();
             const telefoon = document.getElementById('proefles-telefoon').value.trim();
@@ -836,62 +889,61 @@
                 return;
             }
 
-            const key = `${datum}_${groep}`;
-            const nieuwLid = {
+            tempProeflessen.push({
                 voornaam,
                 naam,
                 telefoon,
                 email,
                 toegevoegdOp: new Date().toISOString()
-            };
+            });
 
-            let bestaandeProeflessen = [];
-            try {
-                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
-                bestaandeProeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
-                    ? proeflesDocSnap.data().proeflessen
-                    : [];
-            } catch (e) {
-                console.warn('Proefles-collectie niet beschikbaar bij toevoegen:', e);
-                bestaandeProeflessen = [];
-            }
+            // Formulier leegmaken
+            document.getElementById('proefles-voornaam').value = '';
+            document.getElementById('proefles-naam').value = '';
+            document.getElementById('proefles-telefoon').value = '';
+            document.getElementById('proefles-email').value = '';
+            document.getElementById('proefles-voornaam').focus();
 
-            const updatedProeflessen = [...bestaandeProeflessen, nieuwLid];
+            renderTempProeflesList();
+        }
 
-            try {
-                await setDoc(doc(db, "proeflessen", key), {
-                    groep,
-                    datum,
-                    proeflessen: updatedProeflessen,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
-            } catch (e) {
-                console.warn('Opslaan in proeflessen mislukt, zorg dat de collectie wel toegelaten is:', e);
-            }
+        async function saveAllTempProeflessen() {
+            const groep = document.getElementById('filter-groep').value;
+            const datumDisplay = document.getElementById('les-datum').value;
+            const datum = convertEuropeanToISO(datumDisplay);
+            if(!datum) { alert("Kies eerst een datum!"); return; }
+            if(tempProeflessen.length === 0) { alert("Er zijn geen proefles-invoeren om op te slaan."); return; }
+
+            const key = `${datum}_${groep}`;
 
             try {
-                const aanwezigheidsDocSnap = await getDoc(doc(db, "aanwezigheden", key));
-                const aanwezigheidData = aanwezigheidsDocSnap.exists() ? aanwezigheidsDocSnap.data() : {};
+                // Laad bestaande proeflessen uit aanwezigheden
+                const bestaandDoc = await getDoc(doc(db, "aanwezigheden", key));
+                let bestaandeProeflessen = [];
+                if (bestaandDoc.exists() && Array.isArray(bestaandDoc.data().proeflessen)) {
+                    bestaandeProeflessen = bestaandDoc.data().proeflessen;
+                }
 
+                // Voeg alle temp-proeflessen toe
+                const updatedProeflessen = [...bestaandeProeflessen, ...tempProeflessen];
+
+                // Sla op in aanwezigheden
+                const aanwezigheidData = bestaandDoc.exists() ? bestaandDoc.data() : {};
                 await setDoc(doc(db, "aanwezigheden", key), {
                     ...aanwezigheidData,
                     groep,
                     datum,
                     proeflessen: updatedProeflessen,
-                    verslag: aanwezigheidData.verslag || '',
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
 
-                document.getElementById('proefles-voornaam').value = '';
-                document.getElementById('proefles-naam').value = '';
-                document.getElementById('proefles-telefoon').value = '';
-                document.getElementById('proefles-email').value = '';
-
-                alert("Proefles-lid toegevoegd en opgeslagen voor deze dag.");
+                alert(`${tempProeflessen.length} proefles-lid(en) opgeslagen!`);
+                tempProeflessen = [];
+                renderTempProeflesList();
                 loadAanwezigheidsLijst();
             } catch (e) {
                 console.error(e);
-                alert("Opslaan van proefles is mislukt.");
+                alert("Opslaan van proeflessen is mislukt.");
             }
         }
 
