@@ -306,6 +306,7 @@
                         <select id="sort-leden">
                             <option value="voornaam-asc">Voornaam A-Z</option>
                             <option value="voornaam-desc">Voornaam Z-A</option>
+                            <option value="groep-voornaam">Groep</option>
                             <option value="inschrijf-laatste">Laatste ingeschreven</option>
                             <option value="inschrijf-eerste">Eerste ingeschreven</option>
                             <option value="betaald-eerst">Betaald eerst</option>
@@ -490,6 +491,22 @@
         function sortLedenArray(leden, sortOption) {
             const sorted = [...leden];
             switch (sortOption) {
+                case 'groep-voornaam':
+                    return sorted.sort((a, b) => {
+                        // Trainers als aparte groep bovenaan
+                        const isTrainerA = isTrainerLid(a) ? 0 : 1;
+                        const isTrainerB = isTrainerLid(b) ? 0 : 1;
+                        if (isTrainerA !== isTrainerB) return isTrainerA - isTrainerB;
+                        
+                        // Beide trainers en niet-trainers sorteren per groep, dan voornaam
+                        const groepA = normalizeGroepLijst(a?.groep ?? a?.afdeling ?? [])[0] || 'Z_Onbekend';
+                        const groepB = normalizeGroepLijst(b?.groep ?? b?.afdeling ?? [])[0] || 'Z_Onbekend';
+                        const groepCompare = compareStrings(groepA, groepB);
+                        if (groepCompare !== 0) return groepCompare;
+                        
+                        // Dan op voornaam
+                        return compareStrings(getNaamSortValue(a), getNaamSortValue(b));
+                    });
                 case 'voornaam-desc':
                     return sorted.sort((a, b) => compareStrings(getNaamSortValue(b), getNaamSortValue(a)));
                 case 'inschrijf-laatste':
@@ -522,13 +539,39 @@
             tbody.innerHTML = '';
             
             const gefilterdeLeden = sortLedenArray(getGefilterdeLedenLijst(), getSortOption());
+            const sortOption = getSortOption();
 
             if(gefilterdeLeden.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7">Geen leden gevonden die voldoen aan de filters.</td></tr>';
                 return;
             }
 
+            let currentGroep = null;
+
             gefilterdeLeden.forEach(lid => {
+                // Voeg groepheader in als we sorteren op groep en de groep verandert
+                if (sortOption === 'groep-voornaam') {
+                    // Bepaal de groepcategorie: trainers krijgen aparte header
+                    let displayGroep;
+                    if (isTrainerLid(lid)) {
+                        displayGroep = '⭐ Trainers';
+                    } else {
+                        const lidGroepen = normalizeGroepLijst(lid?.groep ?? lid?.afdeling ?? []);
+                        displayGroep = lidGroepen.length > 0 ? lidGroepen[0] : 'Onbekend';
+                    }
+                    
+                    if (displayGroep !== currentGroep) {
+                        currentGroep = displayGroep;
+                        tbody.innerHTML += `
+                            <tr style="background: #2c3e50; color: white; font-weight: bold;">
+                                <td colspan="7" style="padding: 12px 10px; border: none; font-size: 1rem;">
+                                    📋 ${displayGroep}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+
                 const magOpFoto = lid.fotosToestemming !== undefined ? lid.fotosToestemming : false;
                 const betaaldStatus = lid.lidgeldBetaald || false;
                 const trainerStatus = isTrainerLid(lid);
