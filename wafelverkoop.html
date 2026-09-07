@@ -42,6 +42,9 @@
         /* Succes scherm */
         #success-message { display: none; background: #e8f8f5; border: 2px solid var(--success); padding: 25px; border-radius: 8px; text-align: center; }
         .bank-details { background: white; padding: 15px; border: 1px dashed #ccc; margin: 15px 0; text-align: left; display: inline-block; }
+        .payment-qr { margin: 20px auto; }
+        #payment-qr { display: flex; justify-content: center; min-height: 220px; }
+        #payment-qr img, #payment-qr canvas { max-width: 100%; height: auto; }
     </style>
 </head>
 <body>
@@ -117,13 +120,19 @@
             <div class="bank-details">
                 <strong>Te betalen bedrag:</strong> <span id="bank-bedrag" style="color: var(--accent); font-weight: bold;"></span><br>
                 <strong>Bankrekening (IBAN):</strong> BE86 3632 0190 6550<br>
-                <strong>Op naam van:</strong> Turnkring Jong en Vrij<br>
+                <strong>Op naam van:</strong> SPORT EN TURNVERENIGING JONG EN VRIJ VZW<br>
                 <strong>Mededeling (VERPLICHT!):</strong> <span id="bank-mededeling" style="background: #f1c40f; padding: 2px 6px; font-weight: bold; border-radius:3px;"></span>
+            </div>
+            <div class="payment-qr">
+                <h3>Of betaal via je bankapp</h3>
+                <p>Scan deze EPC/SEPA QR-code in je bankapp en controleer vóór bevestiging het bedrag en de mededeling.</p>
+                <div id="payment-qr" aria-label="QR-code voor de overschrijving"></div>
             </div>
             <p style="font-size: 0.9rem; color: #7f8c8d;">Tip: Er is automatisch een <strong>bevestigingsmail</strong> onderweg naar jouw e-mailadres met de betalingsinstructies. Check ook je spam-folder als je deze niet meteen ontvangt!</p>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -181,6 +190,40 @@
             return { totaalAantal, totaalPrijs };
         }
 
+        function maakEpcBetaalgegevens(bedrag, bestelId, koperNaam) {
+            const mededeling = `${bestelId} - ${koperNaam}`.slice(0, 140);
+            return [
+                "BCD",
+                "002",
+                "1",
+                "SCT",
+                "BBRUBEBB",
+                "SPORT EN TURNVERENIGING JONG EN VRIJ VZW",
+                "BE86363201906550",
+                `EUR${bedrag.toFixed(2)}`,
+                "",
+                mededeling,
+                ""
+            ].join("\n");
+        }
+
+        function toonBetaalQr(bedrag, bestelId, koperNaam) {
+            const qrContainer = document.getElementById('payment-qr');
+            qrContainer.innerHTML = '';
+
+            if (typeof QRCode === 'undefined') {
+                qrContainer.innerText = 'De QR-code kon niet geladen worden. Gebruik de overschrijvingsgegevens hierboven.';
+                return;
+            }
+
+            new QRCode(qrContainer, {
+                text: maakEpcBetaalgegevens(bedrag, bestelId, koperNaam),
+                width: 220,
+                height: 220,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
         // 3. Bestelling verwerken en opslaan
         document.getElementById('wafel-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -235,6 +278,7 @@
                 document.getElementById('wafel-form').style.display = 'none';
                 document.getElementById('bank-bedrag').innerText = `€ ${totaalPrijs.toFixed(2)}`;
                 document.getElementById('bank-mededeling').innerText = bestelId;
+                toonBetaalQr(totaalPrijs, bestelId, bestellingData.koperNaam);
                 document.getElementById('success-message').style.display = 'block';
                 window.scrollTo(0, 0);
             } catch (error) {

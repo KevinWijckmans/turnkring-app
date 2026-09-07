@@ -7,7 +7,7 @@ export const handler = async (event) => {
   try {
     const data = JSON.parse(event.body);
     
-    // Jouw geheime Resend API key halen we dadelijk veilig uit Netlify
+    //  Resend API key halen  veilig uit Netlify
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
     // We bouwen een overzichtje van de bestelde producten voor in de mail
@@ -28,6 +28,8 @@ export const handler = async (event) => {
       }
     }
 
+    const betalingsmededeling = `${data.bestelId} - ${data.koperNaam}`.slice(0, 140);
+
     // De e-mail opbouwen in HTML
     const emailHtml = `
       <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
@@ -46,8 +48,8 @@ export const handler = async (event) => {
           <h3 style="margin-top: 0; color: #e67e22;">Betalingsinstructies:</h3>
           <p style="margin: 5px 0;"><strong>Te betalen:</strong> € ${data.totaalBedrag.toFixed(2)}</p>
           <p style="margin: 5px 0;"><strong>Bankrekening (IBAN):</strong> BE86 3632 0190 6550</p>
-          <p style="margin: 5px 0;"><strong>Op naam van:</strong> Turnkring Jong en Vrij</p>
-          <p style="margin: 5px 0;"><strong>Mededeling (VERPLICHT!):</strong> <span style="background: #f1c40f; padding: 2px 6px; font-weight: bold; border-radius:3px;">${data.bestelId}</span></p>
+          <p style="margin: 5px 0;"><strong>Op naam van:</strong> SPORT EN TURNVERENIGING JONG EN VRIJ VZW</p>
+          <p style="margin: 5px 0;"><strong>Mededeling (VERPLICHT!):</strong> <span style="background: #f1c40f; padding: 2px 6px; font-weight: bold; border-radius:3px;">${betalingsmededeling}</span></p>
         </div>
 
         <p style="font-size: 0.9rem; color: #7f8c8d;"><i>Je bestelling is definitief zodra we de betaling hebben ontvangen.</i></p>
@@ -63,9 +65,9 @@ export const handler = async (event) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "Turnkring Jong en Vrij <wafelverkoop@jongenvrij.be>", // Pas dit aan naar je gewenste naam/adres
+        from: "Turnkring Jong en Vrij <wafelverkoop@jongenvrij.be>", // gewenste naam/adres
         to: [data.koperEmail],
-        bcc: ["eddy.vinck@skynet.be"], // Zo krijg je zelf ook een kopie per bestelling
+        bcc: ["eddy.vinck@skynet.be"],  
         subject: `Bevestiging wafelbestelling ${data.bestelId}`,
         html: emailHtml
       })
