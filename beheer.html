@@ -839,6 +839,19 @@
 
         let tempProeflessen = []; // Tijdelijke array voor meerdere proefles-invoeren
 
+        function bewaarAangevinkteAanwezigheden() {
+            return new Set(
+                [...document.querySelectorAll('.presence-check:checked, .trainer-presence-check:checked')]
+                    .map(checkbox => checkbox.value)
+            );
+        }
+
+        function herstelAangevinkteAanwezigheden(aangevinkteIds) {
+            document.querySelectorAll('.presence-check, .trainer-presence-check').forEach(checkbox => {
+                checkbox.checked = aangevinkteIds.has(checkbox.value);
+            });
+        }
+
         function renderTempProeflesList() {
             const container = document.getElementById('proefles-temp-list');
             if (!container) return;
@@ -913,6 +926,7 @@
                 return;
             }
 
+            const aangevinkteIds = bewaarAangevinkteAanwezigheden();
             const key = `${datum}_${groep}`;
 
             try {
@@ -945,7 +959,8 @@
                 document.getElementById('proefles-email').value = '';
                 document.getElementById('proefles-voornaam').focus();
 
-                loadAanwezigheidsLijst();
+                await loadAanwezigheidsLijst();
+                herstelAangevinkteAanwezigheden(aangevinkteIds);
             } catch (e) {
                 console.error('Fout bij direct opslaan proefles:', e);
                 alert('De proefles kon niet direct worden opgeslagen.');
@@ -959,6 +974,7 @@
             if(!datum) { alert("Kies eerst een datum!"); return; }
             if(tempProeflessen.length === 0) { alert("Er zijn geen proefles-invoeren om op te slaan."); return; }
 
+            const aangevinkteIds = bewaarAangevinkteAanwezigheden();
             const key = `${datum}_${groep}`;
 
             try {
@@ -985,7 +1001,8 @@
                 alert(`${tempProeflessen.length} proefles-lid(en) opgeslagen!`);
                 tempProeflessen = [];
                 renderTempProeflesList();
-                loadAanwezigheidsLijst();
+                await loadAanwezigheidsLijst();
+                herstelAangevinkteAanwezigheden(aangevinkteIds);
             } catch (e) {
                 console.error(e);
                 alert("Opslaan van proeflessen is mislukt.");
