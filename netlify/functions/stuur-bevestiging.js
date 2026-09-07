@@ -67,7 +67,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         from: "Turnkring Jong en Vrij <wafelverkoop@jongenvrij.be>", // gewenste naam/adres
         to: [data.koperEmail],
-        bcc: ["eddy.vinck@skynet.be"],  
+        bcc: ["kevinsamsungj5@gmail.com"],  
         subject: `Bevestiging wafelbestelling ${data.bestelId}`,
         html: emailHtml
       })
