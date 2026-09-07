@@ -13,6 +13,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        .hidden-pot { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
         
         /* Producten tabel styling */
         .product-grid { margin-top: 20px; }
@@ -53,6 +54,10 @@
     <div class="container">
         <!-- HET BESTELFORMULIER -->
         <form id="wafel-form">
+            <div class="hidden-pot" aria-hidden="true">
+                <label for="website">Website</label>
+                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+            </div>
             <h2>1. Jouw Gegevens</h2>
             <div class="form-group">
                 <label for="koper-naam">Naam & Voornaam koper:</label>
@@ -70,7 +75,7 @@
             <h2>2. Lid gegevens</h2>
             <div class="form-group">
                 <label for="steun-lid-naam">Naam & Voornaam turner/turnster:</label>
-                <input type="text" id="steun-lid-naam" required placeholder="Bijv. Kevin Wijckmans">
+                <input type="text" id="steun-lid-naam" required placeholder="Bijv. Jan Janssens">
             </div>
             <div class="form-group">
                 <label for="lid-groep">In welke groep traint dit lid?</label>
@@ -92,7 +97,7 @@
                 </select>
             </div>
 
-            <h2>3. Kies je lekkers (€3,00 per stuk)</h2>
+            <h2>3. Kies je lekkers</h2>
             <div class="product-grid" id="product-lijst">
                 <!-- Wordt dynamisch opgebouwd via JS -->
             </div>
@@ -179,6 +184,10 @@
         // 3. Bestelling verwerken en opslaan
         document.getElementById('wafel-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            if (document.getElementById('website').value.trim() !== '') {
+                return;
+            }
             
             const { totaalAantal, totaalPrijs } = berekenTotaal();
             if(totaalAantal === 0) {
