@@ -626,12 +626,12 @@
                             // Firebase probeert het te verwijderen
                             await deleteDoc(doc(db, "leden", lidId));
                             
-                            // Optioneel: als je geen real-time listener gebruikt (onSnapshot), 
-                            // kun je hier renderLeden() nog eens aanroepen om de rij direct te verbergen.
+                            
+                            //  renderLeden() nog eens aanroepen om de rij direct te verbergen.
                             
                         } catch (error) {
                             console.error("Verwijderen mislukt:", error);
-                            // Als de Security Rules het blokkeren (Missing or insufficient permissions)
+                            // Als de Security Rules blokkeren 
                             alert("Fout: Je hebt geen rechten om leden te verwijderen!");
                         }
                     }
@@ -639,7 +639,7 @@
             });
         }
 
-        // --- EXPORT FUNCTIE NAAR EXCEL (CSV DIE DIRECT GOED OPENT) ---
+        // --- EXPORT FUNCTIE NAAR EXCEL (CSV) ---
         function exportToExcel() {
             const dataToExport = sortLedenArray(getGefilterdeLedenLijst(), getSortOption());
             if(dataToExport.length === 0) {
@@ -647,10 +647,10 @@
                 return;
             }
 
-            // Kolomtitels (Excel-vriendelijk)
+            // Kolomtitels (Excel)
             const headers = ["Naam", "Voornaam", "Groep", "Geboortedatum", "Email 1", "Email 2", "Telefoon 1", "Telefoon 2", "Foto Toestemming", "Marketing Mail", "Lidgeld Status"];
             
-            // Bouw de rijen op (we gebruiken een 'Semicolon ;' omdat de Nederlandstalige Excel dat eist om direct kolommen te maken)
+            // Bouwt de rijen op
             let csvContent = "sep=;\n" + headers.join(";") + "\n";
 
             dataToExport.forEach(lid => {
@@ -672,7 +672,7 @@
                     betaald
                 ];
                 
-                // Zorg dat eventuele gekke tekens of komma's Excel niet slopen
+                // Zorg dat eventuele gekke tekens of komma's Excel niet slopenfakka Excel CSV
                 const opgeschoondeRij = rij.map(veld => `"${String(veld).replace(/"/g, '""')}"`);
                 csvContent += opgeschoondeRij.join(";") + "\n";
             });

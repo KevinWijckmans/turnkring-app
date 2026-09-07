@@ -7,7 +7,7 @@ export const handler = async (event) => {
     const data = JSON.parse(event.body);
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-    // Prachtige HTML e-mail voor het nieuwe lid / de ouders
+    // HTML e-mail voor het nieuwe inschrijving
     const emailHtml = `
       <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
         <h2 style="color: #2c3e50; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">Welkom bij Turnkring Jong en Vrij! 🤸‍♂️✨</h2>
@@ -41,9 +41,9 @@ export const handler = async (event) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "Turnkring Jong en Vrij <inschrijvingen@jongenvrij.be>", // Of info@jongenvrij.be
+        from: "Turnkring Jong en Vrij <inschrijvingen@jongenvrij.be>", // 
         to: [data.email1],
-        bcc: ["kevinsamsungj5@gmail.com"], // Optioneel: kopie naar jezelf
+        bcc: ["kevinsamsungj5@gmail.com"], // 
         subject: `Bevestiging inschrijving: ${data.voornaam} ${data.naam}`,
         html: emailHtml
       })

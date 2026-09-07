@@ -59,10 +59,10 @@ export const handler = async (event) => {
       gekoppeldLidGroep: escapeHtml(data.gekoppeldLidGroep.trim())
     };
     
-    //  Resend API key halen  veilig uit Netlify
+    //  Resend API key halen uit Netlify
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-    // We bouwen een overzichtje van de bestelde producten voor in de mail
+    // overzichtvan de bestelde producten voor in de mail
     let productenLijstHtml = "";
     for (const [key, qty] of Object.entries(data.aantallen)) {
       if (qty > 0) {
@@ -99,7 +99,7 @@ export const handler = async (event) => {
       </div>
     `;
 
-    // Verstuur de mail via de Resend API naar de koper én in BCC naar jezelf (optioneel)
+    // Verstuur de mail via de Resend API naar -> koper
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -107,7 +107,7 @@ export const handler = async (event) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "Turnkring Jong en Vrij <wafelverkoop@jongenvrij.be>", // gewenste naam/adres
+        from: "Turnkring Jong en Vrij <wafelverkoop@jongenvrij.be>", 
         to: [data.koperEmail],
         bcc: ["kevinsamsungj5@gmail.com"],  
         subject: `Bevestiging wafelbestelling ${veiligeData.bestelId}`,
