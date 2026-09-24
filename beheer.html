@@ -115,6 +115,7 @@
             <button onclick="showSection('aanwezigheid')" id="btn-aanwezigheid" class="active">Aanwezigheden</button>
             <button onclick="showSection('stats')" id="btn-stats">Statistieken & Rapporten 📊</button>
             <button onclick="showSection('leden')" id="btn-leden">Ledenlijst (Live)</button>
+            <button onclick="showSection('notities')" id="btn-notities">Notities</button>
         </nav>
 
         <div class="container">
@@ -339,6 +340,43 @@
                             <tr><td colspan="7">Leden laden...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- SECTIE 4: NOTITIES -->
+            <div id="section-notities" class="section">
+                <h2>Verslagen & Spontane Proeflessen</h2>
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label for="notities-groep">Filter op groep:</label>
+                        <select id="notities-groep">
+                            <option value="alle">-- Alle groepen --</option>
+                            <option value="Kleuters">Kleuters</option>
+                            <option value="Mini's">Mini's</option>
+                            <option value="Meisjes 1">Meisjes 1</option>
+                            <option value="Meisjes 2">Meisjes 2</option>
+                            <option value="Jongens">Jongens</option>
+                            <option value="Juffers 1">Juffers 1</option>
+                            <option value="Juffers 2">Juffers 2</option>
+                            <option value="Knapen">Knapen</option>
+                            <option value="Turners en Turnsters">Turners en Turnsters</option>
+                            <option value="Skippies (Rope Skipping)">Skippies (Rope Skipping)</option>
+                            <option value="Jumpers (Rope Skipping)">Jumpers (Rope Skipping)</option>
+                            <option value="Demo Team (Rope Skipping)">Demo Team (Rope Skipping)</option>
+                            <option value="Dance Adults">Adults</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="notities-van">Van datum:</label>
+                        <input type="date" id="notities-van">
+                    </div>
+                    <div class="filter-group">
+                        <label for="notities-tot">Tot datum:</label>
+                        <input type="date" id="notities-tot">
+                    </div>
+                </div>
+                <div id="notities-lijst">
+                    <p>Notities laden...</p>
                 </div>
             </div>
 
@@ -1096,6 +1134,78 @@
             buildIndividualMatrix(gefilterdeLeden, alleLessenGelezen);
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function loadNotities() {
+            const container = document.getElementById('notities-lijst');
+            if (!container) return;
+
+            const groepFilter = document.getElementById('notities-groep').value;
+            const van = document.getElementById('notities-van').value;
+            const tot = document.getElementById('notities-tot').value;
+            container.innerHTML = '<p>Notities laden...</p>';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, 'aanwezigheden'));
+                const notities = [];
+
+                querySnapshot.forEach(snapshot => {
+                    const data = snapshot.data();
+                    const groep = data.groep || '';
+                    const datum = data.datum || '';
+                    const proeflessen = Array.isArray(data.proeflessen) ? data.proeflessen : [];
+
+                    if (!groep || !datum || (groepFilter !== 'alle' && !lidHeeftGroep({ groep }, groepFilter))) return;
+                    if (van && datum < van || tot && datum > tot) return;
+                    if (!String(data.verslag || '').trim() && proeflessen.length === 0) return;
+
+                    notities.push({ groep, datum, verslag: String(data.verslag || '').trim(), proeflessen });
+                });
+
+                notities.sort((a, b) => b.datum.localeCompare(a.datum) || compareStrings(a.groep, b.groep));
+
+                if (notities.length === 0) {
+                    container.innerHTML = '<div style="padding:16px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px;">Geen verslagen of spontane proeflessen gevonden voor deze filters.</div>';
+                    return;
+                }
+
+                const perGroep = {};
+                notities.forEach(notitie => {
+                    if (!perGroep[notitie.groep]) perGroep[notitie.groep] = [];
+                    perGroep[notitie.groep].push(notitie);
+                });
+
+                container.innerHTML = Object.keys(perGroep).sort(compareStrings).map(groep => `
+                    <section style="margin: 0 0 24px;">
+                        <h3 style="margin:0 0 10px; padding-bottom:8px; border-bottom:2px solid #e74c3c;">${escapeHtml(groep)}</h3>
+                        ${perGroep[groep].map(notitie => `
+                            <article style="background:#f8fafc; border:1px solid #dfe7f1; border-radius:8px; padding:14px; margin-bottom:12px;">
+                                <strong>${escapeHtml(formatDateEuropean(notitie.datum))}</strong>
+                                ${notitie.verslag ? `<p style="white-space:pre-wrap; margin:10px 0 0;"><strong>Verslag:</strong><br>${escapeHtml(notitie.verslag)}</p>` : ''}
+                                ${notitie.proeflessen.length ? `
+                                    <div style="margin-top:10px;">
+                                        <strong>Spontane proeflessen (${notitie.proeflessen.length}):</strong>
+                                        <ul style="margin:6px 0 0; padding-left:20px;">
+                                            ${notitie.proeflessen.map(lid => `<li>${escapeHtml(`${lid.voornaam || 'Onbekend'} ${lid.naam || ''}`.trim())}${lid.telefoon ? ` - ${escapeHtml(lid.telefoon)}` : ''}${lid.email ? ` - ${escapeHtml(lid.email)}` : ''}</li>`).join('')}
+                                        </ul>
+                                    </div>` : ''}
+                            </article>
+                        `).join('')}
+                    </section>
+                `).join('');
+            } catch (error) {
+                console.error('Fout bij laden notities:', error);
+                container.innerHTML = '<p>De notities konden niet geladen worden.</p>';
+            }
+        }
+
         function buildTrainerMatrix(trainerData, lessen) {
             const container = document.getElementById('trainerChart');
             if (!container) return;
@@ -1257,6 +1367,9 @@
         document.getElementById('stats-groep').addEventListener('change', loadAanwezigheidsStats);
         document.getElementById('stats-van').addEventListener('change', loadAanwezigheidsStats);
         document.getElementById('stats-tot').addEventListener('change', loadAanwezigheidsStats);
+        document.getElementById('notities-groep').addEventListener('change', loadNotities);
+        document.getElementById('notities-van').addEventListener('change', loadNotities);
+        document.getElementById('notities-tot').addEventListener('change', loadNotities);
         
         const vandaag = new Date();
         const maandGeleden = new Date();
@@ -1287,6 +1400,7 @@
             if(sectionId === 'leden') renderLeden();
             if(sectionId === 'aanwezigheid') loadAanwezigheidsLijst();
             if(sectionId === 'stats') loadAanwezigheidsStats();
+            if(sectionId === 'notities') loadNotities();
         }
     </script>
         <!-- PWA Registratie Script -->
