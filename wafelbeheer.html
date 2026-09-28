@@ -277,8 +277,29 @@
                     const veld = e.currentTarget.dataset.field;
                     const huidigeBestelling = alleBestellingen.find(b => b.bestelId === id);
                     const nieuweStatus = !huidigeBestelling[veld];
-                    
-                    await updateDoc(doc(db, "wafel_bestellingen", id), { [veld]: nieuweStatus });
+
+                    try {
+                        await updateDoc(doc(db, "wafel_bestellingen", id), { [veld]: nieuweStatus });
+
+                        if (veld === 'betaaldStatus' && nieuweStatus === true) {
+                            const response = await fetch('/.netlify/functions/stuur-betaling-ontvangen', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    ...huidigeBestelling,
+                                    betaaldStatus: true
+                                })
+                            });
+
+                            if (!response.ok) {
+                                const payload = await response.json().catch(() => ({}));
+                                console.error('Betalingsmail kon niet verzonden worden:', payload);
+                                alert('Bestelling is als betaald gemarkeerd, maar de bevestigingsmail kon niet verzonden worden.');
+                            }
+                        }
+                    } catch (error) {
+                        alert('Fout bij het bijwerken van de status: ' + error.message);
+                    }
                 });
             });
 
