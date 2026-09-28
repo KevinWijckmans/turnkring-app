@@ -111,12 +111,11 @@
                             <th>Bestelling Inhoud</th>
                             <th>Te betalen</th>
                             <th>Betaald?</th>
-                            <th>Geleverd?</th>
                             <th style="text-align: center; width: 50px;">Actie</th>
                         </tr>
                     </thead>
                     <tbody id="wafel-tbody">
-                        <tr><td colspan="8">Data laden...</td></tr>
+                        <tr><td colspan="7">Data laden...</td></tr>
                     </tbody>
                     </table>
                 </div>
@@ -256,7 +255,6 @@
                         <td>${inhoudHTML}</td>
                         <td>€ ${(b.totaalBedrag || 0).toFixed(2)}</td>
                         <td><button class="btn-status ${b.betaaldStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="betaaldStatus">${b.betaaldStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
-                        <td><button class="btn-status ${b.afgeleverdStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="afgeleverdStatus">${b.afgeleverdStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
                         <td style="text-align: center;">
                             <button class="btn-delete" data-id="${b.bestelId}" data-koper="${b.koperNaam}" title="Bestelling verwijderen">🗑️</button>
                         </td>
@@ -265,7 +263,7 @@
             });
 
             if (alleBestellingen.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8">Nog geen bestellingen gevonden.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7">Nog geen bestellingen gevonden.</td></tr>';
             }
 
             document.getElementById('stat-totaal-dozen').innerText = totaalDozen;
@@ -399,7 +397,7 @@
         function exportWafelsToExcel() {
             if(alleBestellingen.length === 0) return alert("Geen data om te exporteren.");
             
-            const headers = ["Bestelnummer", "Datum", "Naam Koper", "Email Koper", "Telefoon", "Gekoppeld Lid", "Groep", "Vanille", "Choco", "Wafelmix", "Truffels", "Zeevruchten", "Marsepein", "Frangipane", "Totaal Bedrag", "Betaald", "Geleverd"];
+            const headers = ["Bestelnummer", "Datum", "Naam Koper", "Email Koper", "Telefoon", "Gekoppeld Lid", "Groep", "Vanille", "Choco", "Wafelmix", "Truffels", "Zeevruchten", "Marsepein", "Frangipane", "Totaal Bedrag", "Betaald"];
             let csvContent = "sep=;\n" + headers.join(";") + "\n";
 
             alleBestellingen.forEach(b => {
@@ -413,8 +411,7 @@
                     b.aantallen?.marsepein || 0,
                     b.aantallen?.frangipane || 0,
                     b.totaalBedrag,
-                    b.betaaldStatus ? "JA" : "NEE",
-                    b.afgeleverdStatus ? "JA" : "NEE"
+                    b.betaaldStatus ? "JA" : "NEE"
                 ];
                 csvContent += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";") + "\n";
             });
