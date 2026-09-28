@@ -293,8 +293,8 @@
 
                             if (!response.ok) {
                                 const payload = await response.json().catch(() => ({}));
-                                console.error('Betalingsmail kon niet verzonden worden:', payload);
-                                alert('Bestelling is als betaald gemarkeerd, maar de bevestigingsmail kon niet verzonden worden.');
+                                console.error('', payload);
+                                alert('Bestelling is als betaald gemarkeerd');
                             }
                         }
                     } catch (error) {
