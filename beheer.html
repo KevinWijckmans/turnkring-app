@@ -572,6 +572,36 @@
             }
         }
 
+        function sortAanwezigheidsLeden(leden, sortOption) {
+            if (sortOption === 'voornaam-asc' || sortOption === 'voornaam-desc') {
+                const richting = sortOption === 'voornaam-asc' ? 1 : -1;
+                const families = new Map();
+
+                leden.forEach((lid, index) => {
+                    const familienaam = String(lid?.naam || '').trim();
+                    const familieKey = familienaam
+                        ? familienaam.toLocaleLowerCase()
+                        : `zonder-familienaam-${index}`;
+                    if (!families.has(familieKey)) families.set(familieKey, []);
+                    families.get(familieKey).push(lid);
+                });
+
+                return [...families.values()]
+                    .map(familie => familie.sort((a, b) =>
+                        richting * compareStrings(a?.voornaam, b?.voornaam)
+                    ))
+                    .sort((a, b) =>
+                        richting * (
+                            compareStrings(a[0]?.voornaam, b[0]?.voornaam) ||
+                            compareStrings(a[0]?.naam, b[0]?.naam)
+                        )
+                    )
+                    .flat();
+            }
+
+            return sortLedenArray(leden, sortOption);
+        }
+
         function renderLeden() {
             const tbody = document.getElementById('leden-lijst-body');
             if(!tbody) return;
@@ -765,7 +795,7 @@
 
             if(verslagField) verslagField.value = bestaandeVerslag;
 
-            const gesorteerdeLeden = sortLedenArray(gefilterdeLeden, sortOption);
+            const gesorteerdeLeden = sortAanwezigheidsLeden(gefilterdeLeden, sortOption);
             const trainerLeden = gesorteerdeLeden.filter(l => isTrainerLid(l));
             const reguliereLeden = gesorteerdeLeden.filter(l => !isTrainerLid(l));
 
@@ -777,7 +807,7 @@
                             const isAanwezig = bestaandeTrainerAanwezigheid.includes(lid.id);
                             return `
                                 <label class="presence-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f7e7a2;">
-                                    <span><strong>${lid.naam}</strong> ${lid.voornaam} ⭐</span>
+                                    <span>${lid.voornaam} <strong>${lid.naam}</strong> ⭐</span>
                                     <input type="checkbox" class="trainer-presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
                                 </label>
                             `;
@@ -791,7 +821,7 @@
                     const isAanwezig = bestaandeAanwezigheid.includes(lid.id);
                     container.innerHTML += `
                         <label class="presence-row" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
-                            <span><strong>${lid.naam}</strong> ${lid.voornaam}</span>
+                            <span>${lid.voornaam} <strong>${lid.naam}</strong></span>
                             <input type="checkbox" class="presence-check" value="${lid.id}" ${isAanwezig ? 'checked' : ''}>
                         </label>
                     `;
