@@ -41,11 +41,12 @@
         
         /* Grafieken Grid Layout */
         .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px; }
+        .group-product-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
         @media(max-width: 1000px) {
             .tabs { flex-wrap: wrap; gap: 8px; }
             .tab-btn { flex: 1 1 calc(50% - 8px); }
         }
-        @media(max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+        @media(max-width: 768px) { .charts-grid, .group-product-charts { grid-template-columns: 1fr; } }
         .table-responsive { overflow-x: auto; }
         .responsive-table { width: 100%; min-width: 720px; }
         .chart-box { background: #fff; border: 1px solid #e1e4e8; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -100,6 +101,14 @@
                     <h2 style="margin:0;">Bestellingen Lijst</h2>
                     <button class="btn" id="export-wafel-btn" style="background-color: #2ecc71;">📥 Download Excel Lijst</button>
                 </div>
+                <div style="max-width: 300px; margin-top: 15px;">
+                    <label for="sort-betaald"><strong>Sorteer op betaaldstatus:</strong></label>
+                    <select id="sort-betaald" style="width:100%; padding:8px; margin-top:5px;">
+                        <option value="standaard">Standaard</option>
+                        <option value="betaald-eerst">Betaald eerst</option>
+                        <option value="onbetaald-eerst">Niet betaald eerst</option>
+                    </select>
+                </div>
 
                 <div class="table-responsive">
                     <table class="responsive-table">
@@ -139,6 +148,16 @@
                         <canvas id="productChart"></canvas>
                     </div>
                 </div>
+
+                <h3>Verkochte producten per groep</h3>
+                <div id="groep-product-charts" class="group-product-charts"></div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:30px;">
+                    <h3 style="margin:0;">Verkochte producten per lid</h3>
+                    <button class="btn" id="export-lidproducten-btn" style="background-color:#2ecc71;">📥 Download ledenoverzicht (Excel)</button>
+                </div>
+                <p>Bestellingen van dezelfde naam worden samengevoegd, ongeacht hoofdletters. Leden staan alfabetisch per groep.</p>
+                <div id="lidproducten-overzicht" class="table-responsive"></div>
             </div>
 
         </div>
@@ -165,6 +184,7 @@
         let alleBestellingen = [];
         let groepChartInstance = null;
         let productChartInstance = null;
+        let groepProductChartInstances = [];
 
         const productNamen = {
             vanille: "Vanillewafels",
@@ -176,9 +196,15 @@
             frangipane: "Frangipane"
         };
 
+        function compareStrings(a, b) {
+            return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+        }
+
         // --- TAB SWITCH LOGICA ---
         document.getElementById('btn-overzicht').addEventListener('click', () => switchTab('tab-overzicht', 'btn-overzicht'));
         document.getElementById('btn-statistieken').addEventListener('click', () => switchTab('tab-statistieken', 'btn-statistieken'));
+        document.getElementById('sort-betaald').addEventListener('change', renderWafelDashboard);
+        document.getElementById('export-lidproducten-btn').addEventListener('click', exportLidProductenToExcel);
 
         function switchTab(tabId, btnId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -227,12 +253,19 @@
         function renderWafelDashboard() {
             const tbody = document.getElementById('wafel-tbody');
             tbody.innerHTML = '';
+            const gesorteerdeBestellingen = [...alleBestellingen];
+            const sorteerOptie = document.getElementById('sort-betaald').value;
+            if (sorteerOptie === 'betaald-eerst') {
+                gesorteerdeBestellingen.sort((a, b) => Number(!!b.betaaldStatus) - Number(!!a.betaaldStatus));
+            } else if (sorteerOptie === 'onbetaald-eerst') {
+                gesorteerdeBestellingen.sort((a, b) => Number(!!a.betaaldStatus) - Number(!!b.betaaldStatus));
+            }
 
             let totaalDozen = 0;
             let totaleOmzet = 0;
             let totaalBetaald = 0;
 
-            alleBestellingen.forEach(b => {
+            gesorteerdeBestellingen.forEach(b => {
                 totaleOmzet += b.totaalBedrag || 0;
                 if(b.betaaldStatus) totaalBetaald += b.totaalBedrag || 0;
 
@@ -331,32 +364,32 @@
 
         // --- STATISTIEKEN BEREKENEN & GRAFIEKEN UPDATEN (TAB 2) ---
         function updateGrafieken() {
-            let totaalPakken = 0;
             let totaleOmzet = 0;
             let totaalBetaald = 0;
             let aantalBestellingen = alleBestellingen.length;
-
-            const dataPerGroep = {};
-            const dataPerProduct = { vanille: 0, choco_wafel: 0, wafelmix: 0, truffels: 0, zeevruchten: 0, marsepein: 0, frangipane: 0 };
+            const dataPerGroep = new Map();
+            const dataPerProduct = Object.fromEntries(Object.keys(productNamen).map(id => [id, 0]));
 
             alleBestellingen.forEach(b => {
                 totaleOmzet += b.totaalBedrag || 0;
                 if(b.betaaldStatus) totaalBetaald += b.totaalBedrag || 0;
 
                 if (b.aantallen) {
-                    Object.keys(b.aantallen).forEach(prodId => {
-                        const aantal = b.aantallen[prodId] || 0;
-                        totaalPakken += aantal;
+                    const groep = String(b.gekoppeldLidGroep || '').trim() || "Geen groep gespecificeerd";
+                    const groepKey = groep.toLocaleLowerCase();
+                    if (!dataPerGroep.has(groepKey)) {
+                        dataPerGroep.set(groepKey, { naam: groep, totaal: 0, producten: { ...dataPerProduct } });
+                    }
+                    const groepData = dataPerGroep.get(groepKey);
 
-                        if (dataPerProduct[prodId] !== undefined) {
-                            dataPerProduct[prodId] += aantal;
-                        }
-
-                        const groep = b.gekoppeldLidGroep || "Geen groep gespecificeerd";
-                        if (!dataPerGroep[groep]) {
-                            dataPerGroep[groep] = 0;
-                        }
-                        dataPerGroep[groep] += aantal;
+                    Object.entries(b.aantallen).forEach(([prodId, waarde]) => {
+                        const aantal = Number(waarde) || 0;
+                        if (aantal <= 0) return;
+                        if (dataPerProduct[prodId] === undefined) dataPerProduct[prodId] = 0;
+                        if (groepData.producten[prodId] === undefined) groepData.producten[prodId] = 0;
+                        dataPerProduct[prodId] += aantal;
+                        groepData.producten[prodId] += aantal;
+                        groepData.totaal += aantal;
                     });
                 }
             });
@@ -368,9 +401,10 @@
             document.getElementById('stat-nog-te-ontvangen').innerText = `€ ${nogTeOntvangen.toFixed(2)}`;
             document.getElementById('stat-gem-bestelling').innerText = `€ ${gemBestelling.toFixed(2)}`;
 
-            // Grafiek 1: Staafdiagram per Groep
-            const groepLabels = Object.keys(dataPerGroep);
-            const groepAantallen = Object.values(dataPerGroep);
+            // Grafiek 1: verkochte pakken per groep
+            const gesorteerdeGroepen = [...dataPerGroep.values()].sort((a, b) => compareStrings(a.naam, b.naam));
+            const groepLabels = gesorteerdeGroepen.map(groep => groep.naam);
+            const groepAantallen = gesorteerdeGroepen.map(groep => groep.totaal);
 
             if(groepChartInstance) groepChartInstance.destroy();
             const ctxGroep = document.getElementById('groepChart').getContext('2d');
@@ -392,26 +426,212 @@
                 }
             });
 
-            // Grafiek 2: Donutdiagram per Product
-            const productLabels = Object.keys(dataPerProduct).map(id => productNamen[id] || id);
-            const productAantallen = Object.values(dataPerProduct);
+            // Grafiek 2: totaal verkochte aantallen per product
+            const productIds = Object.keys(dataPerProduct).sort((a, b) => compareStrings(productNamen[a] || a, productNamen[b] || b));
+            const productLabels = productIds.map(id => productNamen[id] || id);
+            const productAantallen = productIds.map(id => dataPerProduct[id]);
 
             if(productChartInstance) productChartInstance.destroy();
             const ctxProduct = document.getElementById('productChart').getContext('2d');
             productChartInstance = new Chart(ctxProduct, {
                 type: 'doughnut',
                 data: {
-                    labels: productLabels,
+                    labels: productLabels.map((naam, index) => `${naam} (${productAantallen[index]})`),
                     datasets: [{
                         data: productAantallen,
-                        backgroundColor: ['#f1c40f', '#34495e', '#e67e22', '#7f8c8d', '#9b59b6', '#e74c3c', '#2ecc71']
+                        backgroundColor: ['#f1c40f', '#34495e', '#e67e22', '#7f8c8d', '#9b59b6', '#e74c3c', '#2ecc71', '#3498db', '#1abc9c']
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'right' } }
-                }
+                    plugins: { legend: { position: 'right' } },
+                    cutout: '58%'
+                },
+                plugins: [{
+                    id: 'productCounts',
+                    afterDatasetsDraw(chart) {
+                        const values = chart.data.datasets[0].data;
+                        const arcs = chart.getDatasetMeta(0).data;
+                        const context = chart.ctx;
+                        context.save();
+                        context.textAlign = 'center';
+                        context.textBaseline = 'middle';
+                        context.font = 'bold 13px sans-serif';
+                        context.fillStyle = '#fff';
+                        context.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+                        context.lineWidth = 3;
+                        arcs.forEach((arc, index) => {
+                            if (!values[index]) return;
+                            const props = arc.getProps(['x', 'y', 'startAngle', 'endAngle', 'innerRadius', 'outerRadius'], true);
+                            if (props.endAngle - props.startAngle < 0.2) return;
+                            const angle = (props.startAngle + props.endAngle) / 2;
+                            const radius = (props.innerRadius + props.outerRadius) / 2;
+                            const x = props.x + Math.cos(angle) * radius;
+                            const y = props.y + Math.sin(angle) * radius;
+                            context.strokeText(String(values[index]), x, y);
+                            context.fillText(String(values[index]), x, y);
+                        });
+                        const chartArea = chart.chartArea;
+                        const totaal = values.reduce((sum, value) => sum + (Number(value) || 0), 0);
+                        const centerX = (chartArea.left + chartArea.right) / 2;
+                        const centerY = (chartArea.top + chartArea.bottom) / 2;
+                        context.fillStyle = '#2c3e50';
+                        context.font = 'bold 20px sans-serif';
+                        context.fillText(String(totaal), centerX, centerY - 7);
+                        context.font = '12px sans-serif';
+                        context.fillText('totaal', centerX, centerY + 12);
+                        context.restore();
+                    }
+                }]
             });
+
+            renderGroepProductCharts(gesorteerdeGroepen, productIds);
+            renderLidProductenOverzicht();
+        }
+
+        function renderGroepProductCharts(groepen, productIds) {
+            groepProductChartInstances.forEach(chart => chart.destroy());
+            groepProductChartInstances = [];
+            const container = document.getElementById('groep-product-charts');
+            container.innerHTML = '';
+
+            groepen.forEach((groep, index) => {
+                const box = document.createElement('div');
+                box.className = 'chart-box';
+                const heading = document.createElement('h4');
+                heading.textContent = groep.naam;
+                const canvas = document.createElement('canvas');
+                canvas.id = `groep-product-chart-${index}`;
+                box.append(heading, canvas);
+                container.appendChild(box);
+
+                groepProductChartInstances.push(new Chart(canvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: productIds.map(id => productNamen[id] || id),
+                        datasets: [{
+                            label: 'Aantal verkocht',
+                            data: productIds.map(id => groep.producten[id] || 0),
+                            backgroundColor: '#e67e22',
+                            borderColor: '#d35400',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y',
+                        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                }));
+            });
+
+            if (groepen.length === 0) container.innerHTML = '<p>Er zijn nog geen groepsgegevens beschikbaar.</p>';
+        }
+
+        function getLidProductenPerGroep() {
+            const groepen = new Map();
+            const productIds = new Set(Object.keys(productNamen));
+
+            alleBestellingen.forEach(bestelling => {
+                const lidNaam = String(bestelling.gekoppeldLidNaam || '').trim().replace(/\s+/g, ' ');
+                if (!lidNaam || !bestelling.aantallen) return;
+
+                const groepsnaam = String(bestelling.gekoppeldLidGroep || 'Geen groep gespecificeerd').trim() || 'Geen groep gespecificeerd';
+                const groepKey = groepsnaam.toLocaleLowerCase();
+                if (!groepen.has(groepKey)) groepen.set(groepKey, { naam: groepsnaam, leden: new Map() });
+                const groep = groepen.get(groepKey);
+                const lidKey = lidNaam.toLocaleLowerCase();
+                if (!groep.leden.has(lidKey)) {
+                    groep.leden.set(lidKey, { naam: lidNaam, aantallen: Object.fromEntries([...productIds].map(id => [id, 0])) });
+                }
+                const lid = groep.leden.get(lidKey);
+                if (preferredNameScore(lidNaam) < preferredNameScore(lid.naam)) lid.naam = lidNaam;
+
+                Object.entries(bestelling.aantallen).forEach(([productId, waarde]) => {
+                    const aantal = Number(waarde) || 0;
+                    if (aantal <= 0) return;
+                    productIds.add(productId);
+                    if (lid.aantallen[productId] === undefined) lid.aantallen[productId] = 0;
+                    lid.aantallen[productId] += aantal;
+                });
+            });
+
+            const sortedProductIds = [...productIds].sort((a, b) => compareStrings(productNamen[a] || a, productNamen[b] || b));
+            const sortedGroups = [...groepen.values()]
+                .sort((a, b) => compareStrings(a.naam, b.naam))
+                .map(groep => ({
+                    naam: groep.naam,
+                    leden: [...groep.leden.values()].sort((a, b) => compareStrings(a.naam, b.naam))
+                }));
+            return { groepen: sortedGroups, productIds: sortedProductIds };
+        }
+
+        function preferredNameScore(name) {
+            const actual = String(name);
+            const expected = actual.toLocaleLowerCase().replace(/(^|[\s'-])([a-zà-ÿ])/gi, (_, separator, letter) => separator + letter.toLocaleUpperCase());
+            let score = Math.abs(expected.length - actual.length);
+            for (let index = 0; index < Math.min(expected.length, actual.length); index++) {
+                if (expected[index].toLocaleLowerCase() === actual[index].toLocaleLowerCase() && expected[index] !== actual[index]) score++;
+            }
+            return score;
+        }
+
+        function renderLidProductenOverzicht() {
+            const { groepen, productIds } = getLidProductenPerGroep();
+            const container = document.getElementById('lidproducten-overzicht');
+            if (groepen.length === 0) {
+                container.innerHTML = '<p>Er zijn nog geen bestellingen met een gekoppeld lid.</p>';
+                return;
+            }
+
+            container.innerHTML = groepen.map(groep => {
+                const headers = productIds.map(id => `<th>${escapeHtml(productNamen[id] || id)}</th>`).join('');
+                const rows = groep.leden.map(lid => {
+                    const totaal = productIds.reduce((sum, id) => sum + (lid.aantallen[id] || 0), 0);
+                    const aantallen = productIds.map(id => `<td>${lid.aantallen[id] || 0}</td>`).join('');
+                    return `<tr><td>${escapeHtml(lid.naam)}</td>${aantallen}<td><strong>${totaal}</strong></td></tr>`;
+                }).join('');
+                return `<h4>${escapeHtml(groep.naam)}</h4><table class="responsive-table"><thead><tr><th>Lid</th>${headers}<th>Totaal</th></tr></thead><tbody>${rows}</tbody></table>`;
+            }).join('');
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[character]);
+        }
+
+        function exportLidProductenToExcel() {
+            const { groepen, productIds } = getLidProductenPerGroep();
+            if (groepen.length === 0) {
+                alert("Geen bestellingen met een gekoppeld lid om te exporteren.");
+                return;
+            }
+
+            const headers = ["Groep", "Lid", ...productIds.map(id => productNamen[id] || id), "Totaal"];
+            let csvContent = "sep=;\n" + headers.map(value => `"${String(value).replace(/"/g, '""')}"`).join(";") + "\n";
+            groepen.forEach(groep => {
+                groep.leden.forEach(lid => {
+                    const totaal = productIds.reduce((sum, id) => sum + (lid.aantallen[id] || 0), 0);
+                    const row = [
+                        groep.naam,
+                        lid.naam,
+                        ...productIds.map(id => lid.aantallen[id] || 0),
+                        totaal
+                    ];
+                    csvContent += row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(";") + "\n";
+                });
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const downloadUrl = URL.createObjectURL(blob);
+            link.setAttribute("href", downloadUrl);
+            link.setAttribute("download", `Wafelverkoop_Per_Lid_${new Date().getFullYear()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
         }
 
         // --- EXCEL DOWNLOAD CODE VOOR DE VOORZITTER ---
