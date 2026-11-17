@@ -397,7 +397,7 @@
                     const groep = String(b.gekoppeldLidGroep || '').trim() || "Geen groep gespecificeerd";
                     const groepKey = groep.toLocaleLowerCase();
                     if (!dataPerGroep.has(groepKey)) {
-                        dataPerGroep.set(groepKey, { naam: groep, totaal: 0, producten: { ...dataPerProduct } });
+                        dataPerGroep.set(groepKey, { naam: groep, totaal: 0, producten: {} });
                     }
                     const groepData = dataPerGroep.get(groepKey);
 
