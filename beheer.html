@@ -385,7 +385,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, updateDoc, getDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, updateDoc, getDoc, setDoc, query, where, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -403,6 +403,8 @@
 
         let alleLeden = [];
         let unsubscribeLeden = null;
+        let attendanceLoadVersion = 0;
+        let loadedAttendanceBaseline = null;
         
         let lineChart = null;
         let barChart = null;
@@ -767,33 +769,78 @@
             const proeflesContainer = document.getElementById('proefles-lijst');
             const verslagField = document.getElementById('les-verslag');
             if(!container) return;
-            container.innerHTML = '';
-            if(proeflesContainer) proeflesContainer.innerHTML = '';
-            if(verslagField) verslagField.value = '';
 
             const key = `${datum}_${groep}`;
+            const loadVersion = ++attendanceLoadVersion;
+            const previouslyChecked = loadedAttendanceBaseline?.key === key
+                ? bewaarAangevinkteAanwezigheden()
+                : null;
+            const previouslyEditedVerslag = loadedAttendanceBaseline?.key === key &&
+                verslagField?.value !== loadedAttendanceBaseline.verslag
+                ? verslagField.value
+                : null;
             const sortOption = document.getElementById('attendance-sort')?.value || 'voornaam-asc';
+            const saveButton = document.getElementById('save-presence-btn');
+            if (saveButton) saveButton.disabled = true;
+            if (verslagField) verslagField.disabled = true;
 
-            let aanwezigheidData = {};
+            if (loadedAttendanceBaseline?.key !== key) {
+                container.innerHTML = '<p>Aanwezigheden laden...</p>';
+                if(proeflesContainer) proeflesContainer.innerHTML = '';
+                if(verslagField) verslagField.value = '';
+            }
+
+            let aanwezigheidData;
             let proeflessen = [];
-
             try {
                 const docSnap = await getDoc(doc(db, "aanwezigheden", key));
                 aanwezigheidData = docSnap.exists() ? docSnap.data() : {};
             } catch (e) {
                 console.error('Fout bij laden aanwezigheid-document:', e);
-                aanwezigheidData = {};
+                if (loadVersion === attendanceLoadVersion) {
+                    const foutmelding = 'De aanwezigheden konden niet worden geladen. Controleer je verbinding en probeer opnieuw.';
+                    if (loadedAttendanceBaseline?.key === key) {
+                        container.insertAdjacentHTML('afterbegin', `<p>${foutmelding}</p>`);
+                    } else {
+                        container.innerHTML = `<p>${foutmelding}</p>`;
+                    }
+                }
+                return;
             }
-
-            const gefilterdeLeden = alleLeden.filter(l => lidHeeftGroep(l, groep));
-            if(gefilterdeLeden.length === 0) { container.innerHTML = '<p>Geen leden in deze groep.</p>'; }
 
             const bestaandeAanwezigheid = Array.isArray(aanwezigheidData.aanwezigen) ? aanwezigheidData.aanwezigen : [];
             const bestaandeTrainerAanwezigheid = Array.isArray(aanwezigheidData.trainerAanwezigen) ? aanwezigheidData.trainerAanwezigen : [];
             const bestaandeVerslag = aanwezigheidData.verslag || '';
             const bestaandeProeflessen = Array.isArray(aanwezigheidData.proeflessen) ? aanwezigheidData.proeflessen : [];
 
-            if(verslagField) verslagField.value = bestaandeVerslag;
+            try {
+                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
+                proeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
+                    ? proeflesDocSnap.data().proeflessen
+                    : bestaandeProeflessen;
+            } catch (e) {
+                console.warn('Proefles-collectie niet beschikbaar, toon alleen aanwezigheden:', e);
+                proeflessen = bestaandeProeflessen;
+            }
+
+            const huidigeKey = `${convertEuropeanToISO(document.getElementById('les-datum').value)}_${document.getElementById('filter-groep').value}`;
+            if (loadVersion !== attendanceLoadVersion || huidigeKey !== key) return;
+
+            loadedAttendanceBaseline = {
+                key,
+                aanwezigen: new Set(bestaandeAanwezigheid),
+                trainerAanwezigen: new Set(bestaandeTrainerAanwezigheid),
+                verslag: bestaandeVerslag
+            };
+            container.innerHTML = '';
+            if(proeflesContainer) proeflesContainer.innerHTML = '';
+            if(verslagField) {
+                verslagField.value = previouslyEditedVerslag ?? bestaandeVerslag;
+                verslagField.disabled = false;
+            }
+
+            const gefilterdeLeden = alleLeden.filter(l => lidHeeftGroep(l, groep));
+            if(gefilterdeLeden.length === 0) { container.innerHTML = '<p>Geen leden in deze groep.</p>'; }
 
             const gesorteerdeLeden = sortAanwezigheidsLeden(gefilterdeLeden, sortOption);
             const trainerLeden = gesorteerdeLeden.filter(l => isTrainerLid(l));
@@ -828,16 +875,6 @@
                 });
             }
 
-            try {
-                const proeflesDocSnap = await getDoc(doc(db, "proeflessen", key));
-                proeflessen = proeflesDocSnap.exists() && Array.isArray(proeflesDocSnap.data().proeflessen)
-                    ? proeflesDocSnap.data().proeflessen
-                    : bestaandeProeflessen;
-            } catch (e) {
-                console.warn('Proefles-collectie niet beschikbaar, toon alleen aanwezigheden:', e);
-                proeflessen = bestaandeProeflessen;
-            }
-
             if(proeflesContainer) {
                 if(proeflessen.length === 0) {
                     proeflesContainer.innerHTML = '<div style="padding:12px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px;"><strong>Proefles:</strong> nog geen spontane inschrijvingen voor deze les.</div>';
@@ -858,6 +895,9 @@
                     `;
                 }
             }
+
+            if (previouslyChecked) herstelAangevinkteAanwezigheden(previouslyChecked);
+            if (saveButton) saveButton.disabled = false;
         }
 
         async function saveAanwezigheid() {
@@ -876,32 +916,64 @@
 
             const verslag = document.getElementById('les-verslag')?.value.trim() || '';
             const key = `${datum}_${groep}`;
-
-            // Eerst laden wat al in aanwezigheden bestaat (inclusief proeflessen)
-            let proeflessen = [];
-            try {
-                const bestaandDoc = await getDoc(doc(db, "aanwezigheden", key));
-                if (bestaandDoc.exists() && Array.isArray(bestaandDoc.data().proeflessen)) {
-                    proeflessen = bestaandDoc.data().proeflessen;
-                }
-            } catch (e) {
-                console.warn('Kon bestaande proeflessen niet laden:', e);
+            const baseline = loadedAttendanceBaseline;
+            if (!baseline || baseline.key !== key) {
+                alert("De aanwezigheden zijn nog niet geladen. Wacht even en probeer opnieuw.");
+                return;
             }
 
+            const geselecteerdeAanwezigen = new Set(aanwezigeIds);
+            const geselecteerdeTrainers = new Set(trainerAanwezigeIds);
+            const saveButton = document.getElementById('save-presence-btn');
+            const saveLoadVersion = attendanceLoadVersion;
+            saveButton.disabled = true;
             try {
-                await setDoc(doc(db, "aanwezigheden", key), {
-                    aanwezigen: aanwezigeIds,
-                    trainerAanwezigen: trainerAanwezigeIds,
-                    groep: groep,
-                    datum: datum,
-                    verslag: verslag,
-                    proeflessen: proeflessen,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+                const savedPresence = await runTransaction(db, async (transaction) => {
+                    const ref = doc(db, "aanwezigheden", key);
+                    const snapshot = await transaction.get(ref);
+                    const current = snapshot.exists() ? snapshot.data() : {};
+                    const mergeChanges = (currentValues, originalValues, selectedValues) => {
+                        const merged = new Set(Array.isArray(currentValues) ? currentValues : []);
+                        const changedIds = new Set([...originalValues, ...selectedValues]);
+                        changedIds.forEach(id => {
+                            if (originalValues.has(id) === selectedValues.has(id)) return;
+                            if (selectedValues.has(id)) merged.add(id);
+                            else merged.delete(id);
+                        });
+                        return [...merged];
+                    };
+                    const saved = {
+                        aanwezigen: mergeChanges(current.aanwezigen, baseline.aanwezigen, geselecteerdeAanwezigen),
+                        trainerAanwezigen: mergeChanges(current.trainerAanwezigen, baseline.trainerAanwezigen, geselecteerdeTrainers)
+                    };
+                    transaction.set(ref, {
+                        ...saved,
+                        groep,
+                        datum,
+                        verslag,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                    return saved;
+                });
+                if (loadedAttendanceBaseline?.key === key && attendanceLoadVersion === saveLoadVersion) {
+                    loadedAttendanceBaseline = {
+                        key,
+                        aanwezigen: new Set(savedPresence.aanwezigen),
+                        trainerAanwezigen: new Set(savedPresence.trainerAanwezigen),
+                        verslag
+                    };
+                    if (`${convertEuropeanToISO(document.getElementById('les-datum').value)}_${document.getElementById('filter-groep').value}` === key) {
+                        herstelAangevinkteAanwezigheden(new Set([...savedPresence.aanwezigen, ...savedPresence.trainerAanwezigen]));
+                    }
+                }
                 alert("Aanwezigheden live opgeslagen!");
             } catch(e) {
                 console.error(e);
-                alert("Niet toegestaan.");
+                alert("Opslaan van aanwezigheden is mislukt. Controleer je verbinding en probeer opnieuw.");
+            } finally {
+                if (loadedAttendanceBaseline?.key === key && attendanceLoadVersion === saveLoadVersion) {
+                    saveButton.disabled = false;
+                }
             }
         }
 
@@ -998,11 +1070,6 @@
             const key = `${datum}_${groep}`;
 
             try {
-                const bestaandDoc = await getDoc(doc(db, "aanwezigheden", key));
-                const bestaandeProeflessen = bestaandDoc.exists() && Array.isArray(bestaandDoc.data().proeflessen)
-                    ? [...bestaandDoc.data().proeflessen]
-                    : [];
-
                 const nieuwLid = {
                     voornaam,
                     naam,
@@ -1011,14 +1078,20 @@
                     toegevoegdOp: new Date().toISOString()
                 };
 
-                const aanwezigheidData = bestaandDoc.exists() ? bestaandDoc.data() : {};
-                await setDoc(doc(db, "aanwezigheden", key), {
-                    ...aanwezigheidData,
-                    groep,
-                    datum,
-                    proeflessen: [...bestaandeProeflessen, nieuwLid],
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+                await runTransaction(db, async (transaction) => {
+                    const ref = doc(db, "aanwezigheden", key);
+                    const bestaandDoc = await transaction.get(ref);
+                    const aanwezigheidData = bestaandDoc.exists() ? bestaandDoc.data() : {};
+                    const bestaandeProeflessen = Array.isArray(aanwezigheidData.proeflessen)
+                        ? aanwezigheidData.proeflessen
+                        : [];
+                    transaction.set(ref, {
+                        groep,
+                        datum,
+                        proeflessen: [...bestaandeProeflessen, nieuwLid],
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                });
 
                 // Formulier leegmaken
                 document.getElementById('proefles-voornaam').value = '';
@@ -1047,26 +1120,23 @@
 
             try {
                 // Laad bestaande proeflessen uit aanwezigheden
-                const bestaandDoc = await getDoc(doc(db, "aanwezigheden", key));
-                let bestaandeProeflessen = [];
-                if (bestaandDoc.exists() && Array.isArray(bestaandDoc.data().proeflessen)) {
-                    bestaandeProeflessen = bestaandDoc.data().proeflessen;
-                }
+                const toeTeVoegen = [...tempProeflessen];
+                await runTransaction(db, async (transaction) => {
+                    const ref = doc(db, "aanwezigheden", key);
+                    const bestaandDoc = await transaction.get(ref);
+                    const aanwezigheidData = bestaandDoc.exists() ? bestaandDoc.data() : {};
+                    const bestaandeProeflessen = Array.isArray(aanwezigheidData.proeflessen)
+                        ? aanwezigheidData.proeflessen
+                        : [];
+                    transaction.set(ref, {
+                        groep,
+                        datum,
+                        proeflessen: [...bestaandeProeflessen, ...toeTeVoegen],
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                });
 
-                // Voeg alle temp-proeflessen toe
-                const updatedProeflessen = [...bestaandeProeflessen, ...tempProeflessen];
-
-                // Sla op in aanwezigheden
-                const aanwezigheidData = bestaandDoc.exists() ? bestaandDoc.data() : {};
-                await setDoc(doc(db, "aanwezigheden", key), {
-                    ...aanwezigheidData,
-                    groep,
-                    datum,
-                    proeflessen: updatedProeflessen,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
-
-                alert(`${tempProeflessen.length} proefles-lid(en) opgeslagen!`);
+                alert(`${toeTeVoegen.length} proefles-lid(en) opgeslagen!`);
                 tempProeflessen = [];
                 renderTempProeflesList();
                 await loadAanwezigheidsLijst();
@@ -1389,6 +1459,7 @@
             const datum = convertEuropeanToISO(datumDisplay);
             if(!datum || !groep) return;
             const key = `${datum}_${groep}`;
+            if (loadedAttendanceBaseline?.key !== key) return;
             const verslag = document.getElementById('les-verslag').value;
             const docRef = doc(db, 'aanwezigheden', key);
             setDoc(docRef, { groep, datum, verslag, updatedAt: new Date().toISOString() }, { merge: true });
