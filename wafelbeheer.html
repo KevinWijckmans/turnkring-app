@@ -42,7 +42,9 @@
         
         /* Grafieken Grid Layout */
         .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px; }
-        .group-product-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+        .group-product-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-top: 20px; }
+        .group-product-chart { position: relative; height: 380px; }
+        .group-product-charts .chart-box { min-height: 430px; }
         @media(max-width: 1000px) {
             .tabs { flex-wrap: wrap; gap: 8px; }
             .tab-btn { flex: 1 1 calc(50% - 8px); }
@@ -519,16 +521,21 @@
                 heading.textContent = groep.naam;
                 const canvas = document.createElement('canvas');
                 canvas.id = `groep-product-chart-${index}`;
-                box.append(heading, canvas);
+                const chartContainer = document.createElement('div');
+                chartContainer.className = 'group-product-chart';
+                chartContainer.appendChild(canvas);
+                box.append(heading, chartContainer);
                 container.appendChild(box);
 
+                const aantallen = productIds.map(id => groep.producten[id] || 0);
+                const maxAantal = Math.max(0, ...aantallen);
                 groepProductChartInstances.push(new Chart(canvas.getContext('2d'), {
                     type: 'bar',
                     data: {
                         labels: productIds.map(id => productNamen[id] || id),
                         datasets: [{
                             label: 'Aantal verkocht',
-                            data: productIds.map(id => groep.producten[id] || 0),
+                            data: aantallen,
                             backgroundColor: '#e67e22',
                             borderColor: '#d35400',
                             borderWidth: 1
@@ -536,9 +543,32 @@
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         indexAxis: 'y',
-                        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-                    }
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                max: Math.max(1, maxAantal * 1.15),
+                                ticks: { stepSize: Math.max(1, Math.ceil(maxAantal / 10)), precision: 0 }
+                            }
+                        }
+                    },
+                    plugins: [{
+                        id: 'groep-product-aantallen',
+                        afterDatasetsDraw(chart) {
+                            const context = chart.ctx;
+                            const bars = chart.getDatasetMeta(0).data;
+                            context.save();
+                            context.fillStyle = '#2c3e50';
+                            context.font = 'bold 12px sans-serif';
+                            context.textAlign = 'left';
+                            context.textBaseline = 'middle';
+                            aantallen.forEach((aantal, barIndex) => {
+                                context.fillText(String(aantal), bars[barIndex].x + 7, bars[barIndex].y);
+                            });
+                            context.restore();
+                        }
+                    }]
                 }));
             });
 
