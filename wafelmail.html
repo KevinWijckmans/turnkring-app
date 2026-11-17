@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-mails versturen - Turnkring Jong en Vrij</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --light: #ecf0f1; --danger: #e74c3c; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background: var(--light); color: #333; }
+        header { background: var(--primary); color: white; padding: 18px 20px; text-align: center; position: relative; }
+        .container { max-width: 760px; margin: 24px auto; padding: 24px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
+        .btn { display: inline-block; background: var(--primary); color: white; border: 0; border-radius: 4px; padding: 10px 16px; font-weight: bold; cursor: pointer; text-decoration: none; }
+        .btn:disabled { opacity: .6; cursor: wait; }
+        .field { margin: 18px 0; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; }
+        input, select, textarea { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #bbb; border-radius: 4px; font: inherit; }
+        textarea { min-height: 180px; resize: vertical; }
+        #login-screen { max-width: 400px; margin: 80px auto; padding: 24px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,.1); }
+        #app-content { display: none; }
+        #feedback { margin-top: 16px; padding: 12px; border-radius: 4px; white-space: pre-wrap; }
+        #feedback:empty { display: none; }
+        #feedback.error { background: #fce4e4; color: #8a1f11; }
+        #feedback.success { background: #e8f5e9; color: #1b5e20; }
+        .muted { color: #667; font-size: .92rem; }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            header { padding: 16px 8px; }
+            header h1 { font-size: 1.25rem; }
+            .container { margin: 12px auto; padding: 16px; }
+            #logout-btn { position: static !important; margin-top: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <h2>Inloggen</h2>
+        <form id="login-form">
+            <div class="field"><label for="login-email">E-mail</label><input type="email" id="login-email" required autocomplete="username"></div>
+            <div class="field"><label for="login-password">Wachtwoord</label><input type="password" id="login-password" required autocomplete="current-password"></div>
+            <button type="submit" class="btn" style="width:100%;">Inloggen</button>
+        </form>
+        <p><a href="wafelbeheer.html">Terug naar wafelbeheer</a></p>
+    </div>
+
+    <div id="app-content">
+        <header>
+            <h1>E-mails versturen</h1>
+            <button class="btn" id="logout-btn" style="background:var(--danger); position:absolute; top:15px; right:20px;">Uitloggen</button>
+        </header>
+        <main class="container">
+            <p><a href="wafelbeheer.html">← Terug naar wafelbeheer</a></p>
+            <p class="muted">De ontvangers zijn unieke e-mailadressen van bestellers. Kies welke betaalstatus de mailing ontvangt.</p>
+
+            <div class="field">
+                <label for="payment-filter">Ontvangers</label>
+                <select id="payment-filter">
+                    <option value="all">Alle bestellingen</option>
+                    <option value="paid">Alleen betaalde bestellingen</option>
+                    <option value="unpaid">Alleen onbetaalde bestellingen</option>
+                </select>
+                <p id="recipient-count" class="muted">Bestellingen laden…</p>
+            </div>
+
+            <form id="email-form">
+                <div class="field">
+                    <label for="email-subject">Onderwerp</label>
+                    <input type="text" id="email-subject" maxlength="150" required>
+                </div>
+                <div class="field">
+                    <label for="email-message">Bericht</label>
+                    <textarea id="email-message" maxlength="5000" required></textarea>
+                    <p class="muted">Je bericht verschijnt in de vaste Jong en Vrij-opmaak.</p>
+                </div>
+                <button type="submit" class="btn" id="send-btn">Verstuur e-mail</button>
+            </form>
+            <div id="feedback" role="status" aria-live="polite"></div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyASLIRlphLeArmMRhzAkDbiI-w9tS9s47Y",
+            authDomain: "turnkring-jong-en-vrij.firebaseapp.com",
+            projectId: "turnkring-jong-en-vrij",
+            storageBucket: "turnkring-jong-en-vrij.firebasestorage.app",
+            messagingSenderId: "141385505787",
+            appId: "1:141385505787:web:5a82e6282025cf7be1895e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let bestellingen = [];
+        let unsubscribeBestellingen = null;
+
+        const feedback = document.getElementById('feedback');
+        const sendButton = document.getElementById('send-btn');
+
+        function getOntvangers() {
+            const filter = document.getElementById('payment-filter').value;
+            const gekozen = bestellingen.filter(bestelling =>
+                filter === 'all' ||
+                (filter === 'paid' && bestelling.betaaldStatus === true) ||
+                (filter === 'unpaid' && bestelling.betaaldStatus !== true)
+            );
+            const ontvangers = new Set();
+            let ongeldigeAdressen = 0;
+
+            gekozen.forEach(bestelling => {
+                const email = String(bestelling.koperEmail || '').trim().toLowerCase();
+                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254) {
+                    ontvangers.add(email);
+                } else {
+                    ongeldigeAdressen++;
+                }
+            });
+            return { adressen: [...ontvangers], bestellingen: gekozen.length, ongeldigeAdressen };
+        }
+
+        function updateOntvangerTeller() {
+            const { adressen, bestellingen: aantalBestellingen, ongeldigeAdressen } = getOntvangers();
+            const melding = `${adressen.length} unieke ontvanger(s) uit ${aantalBestellingen} bestelling(en).` +
+                (ongeldigeAdressen ? ` ${ongeldigeAdressen} bestelling(en) zonder geldig e-mailadres worden overgeslagen.` : '');
+            document.getElementById('recipient-count').textContent = melding;
+            sendButton.disabled = adressen.length === 0;
+        }
+
+        document.getElementById('payment-filter').addEventListener('change', updateOntvangerTeller);
+
+        document.getElementById('login-form').addEventListener('submit', event => {
+            event.preventDefault();
+            signInWithEmailAndPassword(
+                auth,
+                document.getElementById('login-email').value,
+                document.getElementById('login-password').value
+            ).catch(error => alert(`Inloggen mislukt: ${error.message}`));
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+        onAuthStateChanged(auth, user => {
+            document.getElementById('login-screen').style.display = user ? 'none' : 'block';
+            document.getElementById('app-content').style.display = user ? 'block' : 'none';
+            if (unsubscribeBestellingen) {
+                unsubscribeBestellingen();
+                unsubscribeBestellingen = null;
+            }
+            bestellingen = [];
+            updateOntvangerTeller();
+            if (user) {
+                unsubscribeBestellingen = onSnapshot(collection(db, 'wafel_bestellingen'), snapshot => {
+                    bestellingen = snapshot.docs.map(order => order.data());
+                    updateOntvangerTeller();
+                }, error => {
+                    feedback.textContent = `Bestellingen laden mislukt: ${error.message}`;
+                    feedback.className = 'error';
+                });
+            }
+        });
+
+        document.getElementById('email-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const { adressen } = getOntvangers();
+            if (adressen.length === 0) {
+                alert('Er zijn geen geldige ontvangers voor deze selectie.');
+                return;
+            }
+            const onderwerp = document.getElementById('email-subject').value.trim();
+            const bericht = document.getElementById('email-message').value.trim();
+            if (!onderwerp || !bericht) return;
+            if (!confirm(`Je staat op het punt deze e-mail naar ${adressen.length} unieke ontvanger(s) te versturen. Doorgaan?`)) return;
+
+            sendButton.disabled = true;
+            sendButton.textContent = 'Bezig met versturen…';
+            feedback.textContent = '';
+            feedback.className = '';
+            try {
+                const idToken = await auth.currentUser.getIdToken();
+                const response = await fetch('/.netlify/functions/verstuur-wafelmail', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ adressen, onderwerp, bericht })
+                });
+                const resultaat = await response.json();
+                if (!response.ok) {
+                    const gedeeltelijk = Number.isInteger(resultaat.verzonden) ? ` ${resultaat.verzonden} e-mail(s) zijn al verzonden; controleer Resend voordat je opnieuw probeert.` : '';
+                    throw new Error(`${resultaat.error || 'Verzenden mislukt.'}${gedeeltelijk}`);
+                }
+                feedback.textContent = `${resultaat.verzonden} e-mail(s) succesvol verzonden.`;
+                feedback.className = 'success';
+                document.getElementById('email-form').reset();
+            } catch (error) {
+                feedback.textContent = error.message || 'Verzenden is mislukt.';
+                feedback.className = 'error';
+            } finally {
+                sendButton.textContent = 'Verstuur e-mail';
+                updateOntvangerTeller();
+            }
+        });
+    </script>
+</body>
+</html>
