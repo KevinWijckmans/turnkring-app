@@ -27,6 +27,7 @@
         .btn-status { padding: 5px 10px; font-size: 0.8rem; border-radius: 20px; color: white; border: none; cursor: pointer; font-weight: bold; }
         .status-yes { background-color: var(--success); }
         .status-no { background-color: var(--danger); }
+        .order-notes { width: 100%; min-width: 140px; box-sizing: border-box; padding: 7px; border: 1px solid #cbd5e1; border-radius: 4px; font: inherit; resize: vertical; }
         
         /* Verwijderknop styling */
         .btn-delete { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; border-radius: 4px; }
@@ -121,6 +122,7 @@
                             <th>Verkochte wafels</th>
                             <th>Bedrag</th>
                             <th>Betaald?</th>
+                            <th>Notities</th>
                             <th style="text-align: center; width: 50px;">Verwijderen</th>
                         </tr>
                     </thead>
@@ -289,6 +291,7 @@
                         <td>${inhoudHTML}</td>
                         <td>€ ${(b.totaalBedrag || 0).toFixed(2)}</td>
                         <td><button class="btn-status ${b.betaaldStatus ? 'status-yes' : 'status-no'}" data-id="${b.bestelId}" data-field="betaaldStatus">${b.betaaldStatus ? 'Ja ✅' : 'Nee ❌'}</button></td>
+                        <td><textarea class="order-notes" data-id="${escapeHtml(String(b.bestelId || ''))}" rows="2" placeholder="Bijv. deels betaald" aria-label="Notitie bij bestelling ${escapeHtml(String(b.bestelId || ''))}">${escapeHtml(b.notities || '')}</textarea></td>
                         <td style="text-align: center;">
                             <button class="btn-delete" data-id="${b.bestelId}" data-koper="${b.koperNaam}" title="Bestelling verwijderen">🗑️</button>
                         </td>
@@ -297,7 +300,7 @@
             });
 
             if (alleBestellingen.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7">Nog geen bestellingen gevonden.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8">Nog geen bestellingen gevonden.</td></tr>';
             }
 
             document.getElementById('stat-totaal-dozen').innerText = totaalDozen;
@@ -333,6 +336,19 @@
                         }
                     } catch (error) {
                         alert('Fout bij het bijwerken van de status: ' + error.message);
+                    }
+                });
+            });
+
+            tbody.querySelectorAll('.order-notes').forEach(input => {
+                input.addEventListener('change', async (e) => {
+                    const veld = e.currentTarget;
+                    const id = veld.dataset.id;
+                    try {
+                        await updateDoc(doc(db, "wafel_bestellingen", id), { notities: veld.value });
+                    } catch (error) {
+                        console.error("Notitie opslaan mislukt:", error);
+                        alert("De notitie kon niet worden opgeslagen: " + error.message);
                     }
                 });
             });
@@ -639,7 +655,7 @@
         function exportWafelsToExcel() {
             if(alleBestellingen.length === 0) return alert("Geen data om te exporteren.");
             
-            const headers = ["Bestelnummer", "Datum", "Naam Koper", "Email Koper", "Telefoon", "Gekoppeld Lid", "Groep", "Vanille", "Choco", "Wafelmix", "Truffels", "Zeevruchten", "Marsepein", "Frangipane", "Totaal Bedrag", "Betaald"];
+            const headers = ["Bestelnummer", "Datum", "Naam Koper", "Email Koper", "Telefoon", "Gekoppeld Lid", "Groep", "Vanille", "Choco", "Wafelmix", "Truffels", "Zeevruchten", "Marsepein", "Frangipane", "Totaal Bedrag", "Betaald", "Notities"];
             let csvContent = "sep=;\n" + headers.join(";") + "\n";
 
             alleBestellingen.forEach(b => {
@@ -653,7 +669,8 @@
                     b.aantallen?.marsepein || 0,
                     b.aantallen?.frangipane || 0,
                     b.totaalBedrag,
-                    b.betaaldStatus ? "JA" : "NEE"
+                    b.betaaldStatus ? "JA" : "NEE",
+                    b.notities || ""
                 ];
                 csvContent += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";") + "\n";
             });
